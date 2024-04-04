@@ -1,0 +1,338 @@
+{
+    "menus": [
+        {
+            "label": "Lighting",
+            "content": [
+                {
+                    "label": "Backlight",
+                    "content": [
+                        {
+                            "label": "Backlight Brightness",
+                            "type": "range",
+                            "options": [
+                                0,
+                                255
+                            ],
+                            "content": [
+                                "id_qmk_backlight_brightness",
+                                1,
+                                1
+                            ]
+                        },
+                        {
+                            "label": "Backlight Effect",
+                            "type": "dropdown",
+                            "content": [
+                                "id_qmk_backlight_effect",
+                                1,
+                                2
+                            ],
+                            "options": [
+                                [
+                                    "Off",
+                                    0
+                                ],
+                                [
+                                    "Breathing",
+                                    1
+                                ]
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Underglow",
+                    "content": [
+                        {
+                            "label": "Brightness",
+                            "type": "range",
+                            "options": [
+                                0,
+                                255
+                            ],
+                            "content": [
+                                "id_qmk_rgblight_brightness",
+                                2,
+                                1
+                            ]
+                        },
+                        {
+                            "label": "Effect",
+                            "type": "dropdown",
+                            "content": [
+                                "id_qmk_rgblight_effect",
+                                2,
+                                2
+                            ],
+                            "options": [
+                                "All Off",
+                                "Solid Color",
+                                "Breathing 1",
+                                "Breathing 2",
+                                "Breathing 3",
+                                "Breathing 4",
+                                "Rainbow Mood 1",
+                                "Rainbow Mood 2",
+                                "Rainbow Mood 3",
+                                "Rainbow Swirl 1",
+                                "Rainbow Swirl 2",
+                                "Rainbow Swirl 3",
+                                "Rainbow Swirl 4",
+                                "Rainbow Swirl 5",
+                                "Rainbow Swirl 6",
+                                "Snake 1",
+                                "Snake 2",
+                                "Snake 3",
+                                "Snake 4",
+                                "Snake 5",
+                                "Snake 6",
+                                "Knight 1",
+                                "Knight 2",
+                                "Knight 3",
+                                "Christmas",
+                                "Gradient 1",
+                                "Gradient 2",
+                                "Gradient 3",
+                                "Gradient 4",
+                                "Gradient 5",
+                                "Gradient 6",
+                                "Gradient 7",
+                                "Gradient 8",
+                                "Gradient 9",
+                                "Gradient 10",
+                                "RGB Test",
+                                "Alternating",
+                                "Twinkle 1",
+                                "Twinkle 2",
+                                "Twinkle 3",
+                                "Twinkle 4",
+                                "Twinkle 5",
+                                "Twinkle 6"
+                            ]
+                        },
+                        {
+                            "showIf": "{id_qmk_rgblight_effect} != 0",
+                            "label": "Effect Speed",
+                            "type": "range",
+                            "options": [
+                                0,
+                                255
+                            ],
+                            "content": [
+                                "id_qmk_rgblight_effect_speed",
+                                2,
+                                3
+                            ]
+                        },
+                        {
+                            "showIf": "{id_qmk_rgblight_effect} != 0 && {id_qmk_rgblight_effect} != 35",
+                            "label": "Color",
+                            "type": "color",
+                            "content": [
+                                "id_qmk_rgblight_color",
+                                2,
+                                4
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "label": "Test",
+            "content": [
+                {
+                    "label": "Test",
+                    "content": [
+                        {
+                            "label": "Toggle Test1",
+                            "type": "toggle",
+                            "content": [
+                                "id_toggle_test_1",
+                                0,
+                                1
+                            ]
+                        },
+                        {
+                            "label": "Toggle Test2",
+                            "type": "toggle",
+                            "content": [
+                                "id_toggle_test_2",
+                                0,
+                                2
+                            ],
+                            "options": [
+                                1,
+                                255
+                            ]
+                        },
+                        {
+                            "label": "Button Test1",
+                            "type": "button",
+                            "content": [
+                                "id_toggle_test_1",
+                                0,
+                                3
+                            ],
+                        },
+                        {
+                            "label": "Button Test2",
+                            "type": "button",
+                            "content": [
+                                "id_toggle_test_2",
+                                0,
+                                4
+                            ],
+                            "options": [
+                                10
+                            ]
+                        },
+                        {
+                            "label": "Range Test1",
+                            "type": "range",
+                            "content": [
+                                "id_range_test_1",
+                                0,
+                                5
+                            ]
+                        },
+                        {
+                            "label": "Range Test2",
+                            "type": "range",
+                            "content": [
+                                "id_range_test_2",
+                                0,
+                                6
+                            ],
+                            "options": [
+                                100,
+                                200
+                            ]
+                        },
+                        {
+                            "label": "DropDown Test1",
+                            "type": "dropdown",
+                            "content": [
+                                "id_dropdown_test_1",
+                                0,
+                                7
+                            ],
+                            "options": [
+                                "item1",
+                                "item2",
+                                "item3"
+                            ]
+                        },
+                        {
+                            "label": "DropDown Test2",
+                            "type": "dropdown",
+                            "content": [
+                                "id_dropdown_test_2",
+                                0,
+                                8
+                            ],
+                            "options": [
+                                [
+                                    "item1",
+                                    0
+                                ],
+                                [
+                                    "item2",
+                                    1
+                                ],
+                                [
+                                    "item3",
+                                    2
+                                ]
+                            ]
+                        },
+                        {
+                            "showIf": "{id_dropdown_test_1} == 0",
+                            "label": "Color Test1",
+                            "type": "color",
+                            "content": [
+                                "id_color_test_1",
+                                0,
+                                9
+                            ]
+                        },
+                        {
+                            "showIf": "{id_dropdown_test_1} == 1",
+                            "label": "Color Test2",
+                            "type": "color",
+                            "content": [
+                                "id_color_test_2",
+                                0,
+                                10
+                            ]
+                        },
+                        {
+                            "showIf": "{id_dropdown_test_1} == 2",
+                            "label": "Color Test3",
+                            "type": "color",
+                            "content": [
+                                "id_color_test_3",
+                                0,
+                                11
+                            ]
+                        },
+                        {
+                            "showIf": "{id_dropdown_test_2} == 1",
+                            "content": [
+                                {
+                                    "label": "Hidden item 1",
+                                    "type": "toggle",
+                                    "content": [
+                                        "id_hidden_1",
+                                        0,
+                                        12
+                                    ]
+                                },
+                                {
+                                    "label": "Hidden item 2",
+                                    "type": "toggle",
+                                    "content": [
+                                        "id_hidden_2",
+                                        0,
+                                        13
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Array Test1",
+                            "type": "range",
+                            "content": [
+                                "id_array_test[0]",
+                                0,
+                                14,
+                                0
+                            ]
+                        },
+                        {
+                            "label": "Array Test2",
+                            "type": "range",
+                            "content": [
+                                "id_array_test[1]",
+                                0,
+                                14,
+                                1
+                            ]
+                        },
+                        {
+                            "showIf": "{id_array_test[0]} >= 100",
+                            "label": "Array Test3",
+                            "type": "range",
+                            "content": [
+                                "id_color_test[2]",
+                                0,
+                                14,
+                                2
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

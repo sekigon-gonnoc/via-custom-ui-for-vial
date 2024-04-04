@@ -1,0 +1,17 @@
+{
+  "name": "liblzma-wasm",
+  "collaborators": [
+    "sekigon-gonnoc <43873124+sekigon-gonnoc@users.noreply.github.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "liblzma_wasm_bg.wasm",
+    "liblzma_wasm.js",
+    "liblzma_wasm.d.ts"
+  ],
+  "module": "liblzma_wasm.js",
+  "types": "liblzma_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

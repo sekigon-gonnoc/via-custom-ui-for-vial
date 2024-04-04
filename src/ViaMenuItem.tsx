@@ -1,0 +1,305 @@
+import {
+  Switch,
+  Slider,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  Grid,
+  FormControl,
+  Button,
+} from "@mui/material";
+import { MuiColorInput, MuiColorInputColors } from "mui-color-input";
+import evaluate from "simple-evaluate";
+
+export interface MenuItemProperties {
+  label: string;
+  content: MenuSectionProperties[];
+}
+
+type ToggleElement = {
+  type: "toggle";
+  label: string;
+  options?: [number, number];
+  content: [string, number, number, number?];
+  value: number;
+  onChange: (value: number) => void;
+};
+
+type RangeElement = {
+  type: "range";
+  label: string;
+  options?: [number, number];
+  content: [string, number, number, number?];
+  value: number;
+  onChange: (value: number) => void;
+};
+
+type DropdownElement = {
+  type: "dropdown";
+  label: string;
+  content: [string, number, number, number?];
+  options: Array<[string, number]> | Array<string>;
+  value: number;
+  onChange: (value: number) => void;
+};
+
+type ColorElement = {
+  type: "color";
+  label: string;
+  content: [string, number, number, number?];
+  value: number;
+  onChange: (value: number) => void;
+};
+
+type ButtonElement = {
+  type: "button";
+  label: string;
+  content: [string, number, number, number?];
+  options?: Array<number>;
+  value: number;
+  onChange: (value: number) => void;
+};
+
+type ShowIfElement =
+  | {
+      showIf: string;
+      content: MenuElementProperties[];
+    }
+  | (MenuElementProperties & { showIf: string });
+
+type MenuElementProperties =
+  | RangeElement
+  | DropdownElement
+  | ColorElement
+  | ToggleElement
+  | ButtonElement;
+
+export type MenuSectionProperties = {
+  label: string;
+  content: (MenuElementProperties | ShowIfElement)[];
+  customValues: { [id: string]: number };
+  onChange: (id: [string, number, number, number?], value: number) => void;
+};
+
+function ViaToggle(props: ToggleElement) {
+  const handleChange = (
+    _event: React.ChangeEvent<HTMLInputElement>,
+    checked: boolean
+  ) => {
+    props.onChange(checked ? props.options?.[1] ?? 1 : props.options?.[0] ?? 0);
+  };
+  return (
+    <>
+      <Grid item xs={3}>
+        <h4>{props.label}</h4>
+      </Grid>
+      <Grid item xs={9}>
+        <Switch
+          onChange={handleChange}
+          checked={props.value == (props.options?.[1] ?? 1)}
+        ></Switch>
+      </Grid>
+    </>
+  );
+}
+function ViaRange(props: RangeElement) {
+  const handleChange = (
+    _event: Event,
+    value: number | number[],
+    _activeThumb: number
+  ) => {
+    if (!Array.isArray(value)) {
+      props.onChange(value);
+    }
+  };
+  return (
+    <>
+      <Grid item xs={3}>
+        <h4>{props.label}</h4>
+      </Grid>
+      <Grid item xs={9}>
+        <Slider
+          value={props.value}
+          onChange={handleChange}
+          min={props.options?.[0] ?? 0}
+          max={props.options?.[1] ?? 255}
+          valueLabelDisplay="auto"
+        ></Slider>
+      </Grid>
+    </>
+  );
+}
+
+function getDropDownLabels(elem: DropdownElement): [string, number][] {
+  return elem.options.map((o, index) => {
+    if (Array.isArray(o)) {
+      return [o[0], o[1]];
+    } else {
+      return [o, index];
+    }
+  });
+}
+
+function ViaDropDown(props: DropdownElement) {
+  const handleChange = (event: SelectChangeEvent) => {
+    props.onChange(
+      getDropDownLabels(props).find((f) => f[0] === event.target.value)?.[1] ??
+        0
+    );
+  };
+  return (
+    <>
+      <Grid item xs={3}>
+        <h4>{props.label}</h4>
+      </Grid>
+      <Grid item xs={9}>
+        <FormControl fullWidth>
+          <Select
+            value={
+              getDropDownLabels(props).find((f) => f[1] === props.value)?.[0] ??
+              ""
+            }
+            onChange={handleChange}
+          >
+            {getDropDownLabels(props).map((o) => {
+              return (
+                <MenuItem key={`${props.label}-${o[0]}`} value={o[0]}>
+                  {o[0]}
+                </MenuItem>
+              );
+            })}
+          </Select>
+        </FormControl>
+      </Grid>
+    </>
+  );
+}
+
+function ViaColor(props: ColorElement) {
+  const handleChange = (value: string, color: MuiColorInputColors) => {
+    console.log(value);
+    props.onChange(parseInt(color.hex.slice(1), 16));
+  };
+  return (
+    <>
+      <Grid item xs={3}>
+        <h4>{props.label}</h4>
+      </Grid>
+      <Grid item xs={9}>
+        <FormControl fullWidth>
+          <MuiColorInput
+            value={{
+              r: (props.value >> 16) & 0xff,
+              g: (props.value >> 8) & 0xff,
+              b: props.value & 0xff,
+            }}
+            onChange={handleChange}
+            format="rgb"
+          ></MuiColorInput>
+        </FormControl>
+      </Grid>
+    </>
+  );
+}
+
+function ViaButton(props: ButtonElement) {
+  return (
+    <>
+      <Grid item xs={3}>
+        <h4>{props.label}</h4>
+      </Grid>
+      <Grid item xs={9}>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            props.onChange(props.options?.[0] ?? 0);
+          }}
+        >
+          Click
+        </Button>
+      </Grid>
+    </>
+  );
+}
+
+function MenuElement(
+  props: MenuSectionProperties,
+  elem: MenuElementProperties
+) {
+  if ("type" in elem) {
+    switch (elem.type) {
+      case "toggle":
+        return (
+          <ViaToggle
+            key={`${props.label}-${elem.label}`}
+            {...elem}
+            value={props.customValues[elem.content[0]]}
+            onChange={(value) => props.onChange(elem.content, value)}
+          />
+        );
+      case "range":
+        return (
+          <ViaRange
+            key={`${props.label}-${elem.label}`}
+            {...elem}
+            value={props.customValues[elem.content[0]]}
+            onChange={(value) => props.onChange(elem.content, value)}
+          />
+        );
+      case "dropdown":
+        return (
+          <ViaDropDown
+            key={`${props.label}-${elem.label}`}
+            {...elem}
+            value={props.customValues[elem.content[0]]}
+            onChange={(value) => props.onChange(elem.content, value)}
+          />
+        );
+      case "color":
+        return (
+          <ViaColor
+            key={`${props.label}-${elem.label}`}
+            {...elem}
+            value={props.customValues[elem.content[0]]}
+            onChange={(value) => props.onChange(elem.content, value)}
+          />
+        );
+      case "button":
+        return (
+          <ViaButton
+            key={`${props.label}-${elem.label}`}
+            {...elem}
+            value={props.customValues[elem.content[0]]}
+            onChange={(value) => props.onChange(elem.content, value)}
+          />
+        );
+      default:
+        return <></>;
+    }
+  }
+}
+
+function ViaMenuItem(props: MenuSectionProperties) {
+  return (
+    <Grid container alignItems="center" spacing={2}>
+      <Grid item xs={12}></Grid>
+      {props.content.flatMap((elem) => {
+        if ("showIf" in elem) {
+          const show = evaluate(
+            props.customValues,
+            elem.showIf.replace(/({|})/g, "")
+          );
+          if (show) {
+            return "label" in elem
+              ? MenuElement(props, elem)
+              : elem.content.flatMap((elem) => MenuElement(props, elem));
+          }
+        } else if ("type" in elem) {
+          return MenuElement(props, elem);
+        }
+      })}
+    </Grid>
+  );
+}
+
+export { ViaMenuItem };
