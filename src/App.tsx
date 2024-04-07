@@ -17,6 +17,10 @@ import {
 } from "@mui/material";
 import { MenuItemProperties } from "./ViaMenuItem";
 
+if (!(navigator as any).hid) {
+  alert("Please use chrome/edge");
+}
+
 const via = new ViaKeyboard();
 
 function App() {
