@@ -4,33 +4,34 @@ class WebRawHID implements WebUsbComInterface {
   private receiveCallback: ((msg: Uint8Array) => void) | null = null;
   private closeCallback: (() => void) = () => { };
 
-  private port: any | null = null;
+  private port: HIDDevice | null = null;
+  private reportId: number = 0;
 
   get connected() {
     return this.port?.opened ?? false;
   }
 
   constructor() {
-    (navigator as any).hid.addEventListener("disconnect", this.closeCallback.bind(this));
+    navigator.hid.addEventListener("disconnect", this.closeCallback.bind(this));
   }
 
   setReceiveCallback(recvHandler: ((msg: Uint8Array) => void) | null) {
     this.receiveCallback = (e: any) => {
       recvHandler?.(new Uint8Array((e.data as DataView).buffer));
     };
-    this.port.addEventListener("inputreport", this.receiveCallback);
+    this.port?.addEventListener("inputreport", this.receiveCallback);
     console.log(this.port);
   }
 
   setCloseCallback(handler: () => void | null) {
-    (navigator as any).hid.removeEventListener("disconnect", this.closeCallback.bind(this));
+    navigator.hid.removeEventListener("disconnect", this.closeCallback.bind(this));
     this.closeCallback = handler;
-    (navigator as any).hid.addEventListener("disconnect", this.closeCallback.bind(this));
+    navigator.hid.addEventListener("disconnect", this.closeCallback.bind(this));
   }
 
-  async open(onConnect: () => void | null, param: { filter: object }) {
-    const request = await (navigator as any).hid.requestDevice({
-      filters: param.filter,
+  async open(onConnect: () => void | null, param: HIDDeviceFilter[]) {
+    const request = await navigator.hid.requestDevice({
+      filters: param
     });
     console.log(request);
     this.port = request[0];
@@ -46,6 +47,9 @@ class WebRawHID implements WebUsbComInterface {
       return Promise.reject(e);
     }
 
+    this.reportId = this.port.collections.find(info => info.outputReports?.[0]?.reportId ?? 0 > 0)?.outputReports?.[0]?.reportId ?? 0;
+    console.log(`Report Id: ${this.reportId}`);
+
     if (onConnect) {
       onConnect();
     }
@@ -56,7 +60,8 @@ class WebRawHID implements WebUsbComInterface {
   }
 
   async writeString(msg: string) {
-    this.port.sendReport(0, msg);
+    const encoder = new TextEncoder()
+    this.port?.sendReport(this.reportId,  encoder.encode(msg));
   }
 
   async write(msg: Uint8Array) {
@@ -65,7 +70,14 @@ class WebRawHID implements WebUsbComInterface {
         .map((v) => v.toString(16))
         .join(" ")}`
     );
-    this.port.sendReport(0, msg);
+    try{
+
+    await this.port?.sendReport(this.reportId, msg);
+    }
+    catch (e)
+    {
+      console.error(e)
+    }
   }
 
   async close() {

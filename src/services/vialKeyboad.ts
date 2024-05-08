@@ -82,9 +82,9 @@ class VialKeyboard {
         closeCallback: () => void = () => { }
     ) {
         if (!this.hid.connected) {
-            await this.hid.open(openCallback, {
-                filter: [{ usagePage: 0xff60, usage: 0x61 }]
-            });
+            await this.hid.open(openCallback,
+                [{ usagePage: 0xff60, usage: 0x61 }]
+            );
             this.hid.setReceiveCallback(this.receiveCallback.bind(this))
             this.hid.setCloseCallback(closeCallback);
         }
