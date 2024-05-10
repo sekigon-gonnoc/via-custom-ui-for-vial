@@ -39,9 +39,9 @@ function App() {
     init();
   }, []);
 
-  const getCustomValues = async () => {
+  const getCustomValues = async (_customValueId:typeof customValueId) => {
     const customValues: { [id: string]: number } = {};
-    for (const element of customValueId) {
+    for (const element of _customValueId) {
       customValues[element[0]] = await via.GetCustomValue(
         element.slice(1) as number[]
       );
@@ -93,7 +93,7 @@ function App() {
         }, [])
     );
     setCustomValueId(customValueId);
-    getCustomValues();
+    getCustomValues(customValueId);
   };
 
   const onSaveClick = async () => {
@@ -101,7 +101,7 @@ function App() {
       await via.SaveCustomValue(element.slice(1) as number[]);
     }
 
-    getCustomValues();
+    getCustomValues(customValueId);
   };
 
   const onEraseClick = async () => {

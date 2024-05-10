@@ -124,6 +124,13 @@ function ViaRange(props: RangeElement) {
       props.onChange(value);
     }
   };
+  const crop = (val: number) => {
+    if (((props.options?.[1] ?? 255) < val && props.options?.[1]) ?? 0 < 0) {
+      return val - 256;
+    }
+
+    return val;
+  };
   return (
     <>
       <Grid item xs={3}>
@@ -131,7 +138,7 @@ function ViaRange(props: RangeElement) {
       </Grid>
       <Grid item xs={9}>
         <Slider
-          value={props.value}
+          value={crop(props.value)}
           onChange={handleChange}
           min={props.options?.[0] ?? 0}
           max={props.options?.[1] ?? 255}
