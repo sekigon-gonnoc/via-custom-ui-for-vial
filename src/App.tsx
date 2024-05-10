@@ -39,6 +39,17 @@ function App() {
     init();
   }, []);
 
+  const getCustomValues = async () => {
+    const customValues: { [id: string]: number } = {};
+    for (const element of customValueId) {
+      customValues[element[0]] = await via.GetCustomValue(
+        element.slice(1) as number[]
+      );
+    }
+    setCustomValues(customValues);
+    console.log(customValues);
+  }
+
   const onOpenClick = async () => {
     await via.Close();
     await via.Open(
@@ -82,15 +93,7 @@ function App() {
         }, [])
     );
     setCustomValueId(customValueId);
-
-    const customValues: { [id: string]: number } = {};
-    for (const element of customValueId) {
-      customValues[element[0]] = await via.GetCustomValue(
-        element.slice(1) as number[]
-      );
-    }
-    setCustomValues(customValues);
-    console.log(customValues);
+    getCustomValues();
   };
 
   const onSaveClick = async () => {
@@ -98,14 +101,12 @@ function App() {
       await via.SaveCustomValue(element.slice(1) as number[]);
     }
 
-    const customValues: { [id: string]: number } = {};
-    for (const element of customValueId) {
-      customValues[element[0]] = await via.GetCustomValue(
-        element.slice(1) as number[]
-      );
-    }
-    setCustomValues(customValues);
+    getCustomValues();
   };
+
+  const onEraseClick = async () => {
+    await via.ResetEeprom();
+  }
 
   return (
     <Grid container spacing={2}>
@@ -137,6 +138,7 @@ function App() {
         </List>
         <Toolbar>
           <Stack spacing={1}>
+            <Stack direction={"row"} spacing={5}>
             <Button
               sx={{ display: connected ? "block" : "none" }}
               variant="contained"
@@ -145,6 +147,15 @@ function App() {
             >
               Save
             </Button>
+            <Button
+              sx={{ display: connected ? "block" : "none" }}
+              variant="contained"
+              color="error"
+              onClick={onEraseClick}
+            >
+              Erase
+            </Button>
+            </Stack>
             <Link href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial" target="_blank">Usage</Link>
           </Stack>
         </Toolbar>

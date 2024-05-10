@@ -107,7 +107,7 @@ class VialKeyboard {
             await this.hid.close()
             throw error;
         }
-        const res = await this.readResponse(100);
+        const res = await this.readResponse(500);
         console.log(`received: ${res}`)
 
         return res;
@@ -147,6 +147,10 @@ class VialKeyboard {
 
     async SaveCustomValue(id: number[]): Promise<void> {
         await this.Command([via_command_id.id_unhandled, via_command_id.id_custom_save, ...id]);
+    }
+    
+    async ResetEeprom():Promise<void>{
+        await this.Command([via_command_id.id_eeprom_reset]);
     }
 }
 
