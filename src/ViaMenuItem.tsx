@@ -11,6 +11,7 @@ import {
   Checkbox,
 } from "@mui/material";
 import { MuiColorInput, MuiColorInputColors } from "mui-color-input";
+import { SyntheticEvent, useState } from "react";
 import evaluate from "simple-evaluate";
 
 export interface MenuItemProperties {
@@ -115,15 +116,6 @@ function ViaToggle(props: ToggleElement) {
   );
 }
 function ViaRange(props: RangeElement) {
-  const handleChange = (
-    _event: Event,
-    value: number | number[],
-    _activeThumb: number
-  ) => {
-    if (!Array.isArray(value)) {
-      props.onChange(value);
-    }
-  };
   const crop = (val: number) => {
     if (((props.options?.[1] ?? 255) < val && props.options?.[1]) ?? 0 < 0) {
       return val - 256;
@@ -131,6 +123,24 @@ function ViaRange(props: RangeElement) {
 
     return val;
   };
+  const [value, setValue]=useState(crop(props.value));
+  const handleChange = (
+    _event: Event,
+    value: number | number[]
+  ) => {
+    if (!Array.isArray(value)) {
+      setValue(value);
+    }
+  };
+  const handleChangeCommitted = (
+    _event: SyntheticEvent | Event,
+    value: number | number[]
+  ) => {
+    if (!Array.isArray(value)) {
+      props.onChange(value);
+    }
+  }
+
   return (
     <>
       <Grid item xs={3}>
@@ -138,8 +148,9 @@ function ViaRange(props: RangeElement) {
       </Grid>
       <Grid item xs={9}>
         <Slider
-          value={crop(props.value)}
+          value={value}
           onChange={handleChange}
+          onChangeCommitted={handleChangeCommitted}
           min={props.options?.[0] ?? 0}
           max={props.options?.[1] ?? 255}
           valueLabelDisplay="auto"
