@@ -9,9 +9,10 @@ import {
   Button,
   ListItemText,
   Checkbox,
+  Input,
 } from "@mui/material";
 import { MuiColorInput, MuiColorInputColors } from "mui-color-input";
-import { SyntheticEvent, useState } from "react";
+import { ChangeEvent, SyntheticEvent, useState } from "react";
 import evaluate from "simple-evaluate";
 
 export interface MenuItemProperties {
@@ -123,11 +124,8 @@ function ViaRange(props: RangeElement) {
 
     return val;
   };
-  const [value, setValue]=useState(crop(props.value));
-  const handleChange = (
-    _event: Event,
-    value: number | number[]
-  ) => {
+  const [value, setValue] = useState(crop(props.value));
+  const handleChange = (_event: Event, value: number | number[]) => {
     if (!Array.isArray(value)) {
       setValue(value);
     }
@@ -139,14 +137,24 @@ function ViaRange(props: RangeElement) {
     if (!Array.isArray(value)) {
       props.onChange(value);
     }
-  }
+  };
+  const handleChangeInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const max = props.options?.[1] ?? 255;
+    const min = props.options?.[0] ?? 0;
+    const value = Math.min(
+      max,
+      Math.max(min, Number(event.target.value === "" ? 0 : event.target.value))
+    );
+    setValue(value);
+    props.onChange(value);
+  };
 
   return (
     <>
       <Grid item xs={3}>
         <h4>{props.label}</h4>
       </Grid>
-      <Grid item xs={9}>
+      <Grid item xs={8}>
         <Slider
           value={value}
           onChange={handleChange}
@@ -155,6 +163,13 @@ function ViaRange(props: RangeElement) {
           max={props.options?.[1] ?? 255}
           valueLabelDisplay="auto"
         ></Slider>
+      </Grid>
+      <Grid item xs={1}>
+        <Input
+          value={value}
+          onChange={handleChangeInput}
+          inputProps={{ type: "number" }}
+        ></Input>
       </Grid>
     </>
   );
