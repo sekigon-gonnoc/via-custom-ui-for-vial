@@ -1,7 +1,7 @@
 import { WebUsbComInterface } from "./webUsbComInterface";
 
 class WebRawHID implements WebUsbComInterface {
-  private receiveCallback: ((msg: Uint8Array) => void) | null = null;
+  private receiveCallback: ((msg: HIDInputReportEvent) => void) | null = null;
   private closeCallback: (() => void) = () => { };
 
   private port: HIDDevice | null = null;
@@ -16,7 +16,7 @@ class WebRawHID implements WebUsbComInterface {
   }
 
   setReceiveCallback(recvHandler: ((msg: Uint8Array) => void) | null) {
-    this.receiveCallback = (e: any) => {
+    this.receiveCallback = (e: HIDInputReportEvent) => {
       recvHandler?.(new Uint8Array((e.data as DataView).buffer));
     };
     this.port?.addEventListener("inputreport", this.receiveCallback);
@@ -87,7 +87,7 @@ class WebRawHID implements WebUsbComInterface {
 
     if (this.port) {
       try {
-        this.port.removeEventListener("inputreport", this.receiveCallback);
+        this.port.removeEventListener("inputreport", this.receiveCallback!);
         await this.port.close();
         this.port = null;
       } catch (e) {
