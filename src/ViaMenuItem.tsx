@@ -12,7 +12,7 @@ import {
   Input,
 } from "@mui/material";
 import { MuiColorInput, MuiColorInputColors } from "mui-color-input";
-import { ChangeEvent, SyntheticEvent, useState } from "react";
+import { ChangeEvent, SyntheticEvent } from "react";
 import evaluate from "simple-evaluate";
 
 export interface MenuItemProperties {
@@ -124,10 +124,9 @@ function ViaRange(props: RangeElement) {
 
     return val;
   };
-  const [value, setValue] = useState(crop(props.value));
   const handleChange = (_event: Event, value: number | number[]) => {
     if (!Array.isArray(value)) {
-      setValue(value);
+      props.onChange(value);
     }
   };
   const handleChangeCommitted = (
@@ -145,7 +144,6 @@ function ViaRange(props: RangeElement) {
       max,
       Math.max(min, Number(event.target.value === "" ? 0 : event.target.value))
     );
-    setValue(value);
     props.onChange(value);
   };
 
@@ -156,7 +154,7 @@ function ViaRange(props: RangeElement) {
       </Grid>
       <Grid item xs={8}>
         <Slider
-          value={value}
+          value={crop(props.value)}
           onChange={handleChange}
           onChangeCommitted={handleChangeCommitted}
           min={props.options?.[0] ?? 0}
@@ -166,7 +164,7 @@ function ViaRange(props: RangeElement) {
       </Grid>
       <Grid item xs={1}>
         <Input
-          value={value}
+          value={crop(props.value)}
           onChange={handleChangeInput}
           inputProps={{ type: "number" }}
         ></Input>

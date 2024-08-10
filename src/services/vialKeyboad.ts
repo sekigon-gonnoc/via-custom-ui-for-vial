@@ -150,7 +150,7 @@ class VialKeyboard {
     }
     
     async ResetEeprom():Promise<void>{
-        await this.Command([via_command_id.id_eeprom_reset]);
+        await this.Command([via_command_id.id_unhandled, via_command_id.id_eeprom_reset]);
     }
 
     GetHidName() {
