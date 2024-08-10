@@ -134,16 +134,23 @@ function App() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const result = e.target?.result as string;
           const parsedJson = Hjson.parse(result);
           console.log(parsedJson);
-          setCustomValues({...customValues, ...parsedJson});
+          const loadedCustomValues = {...customValues, ...parsedJson};
+          setCustomValues(loadedCustomValues);
+          for (const element of customValueId) {
+            await via.SetCustomValue(
+              element.slice(1) as number[],
+              loadedCustomValues[element[0]]
+            );
+          }
         } catch (error) {
           console.error("Error parsing JSON:", error);
           alert("Invalid JSON file.");
