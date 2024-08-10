@@ -12,7 +12,6 @@ import {
   Toolbar,
   Grid,
   ListSubheader,
-  Stack,
   Link,
 } from "@mui/material";
 import { MenuItemProperties } from "./ViaMenuItem";
