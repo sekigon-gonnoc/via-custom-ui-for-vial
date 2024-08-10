@@ -59,6 +59,10 @@ class WebRawHID implements WebUsbComInterface {
     console.log("open Raw HID port");
   }
 
+  getName() {
+    return this.port?.productName ?? "";
+  }
+
   async writeString(msg: string) {
     const encoder = new TextEncoder()
     this.port?.sendReport(this.reportId,  encoder.encode(msg));

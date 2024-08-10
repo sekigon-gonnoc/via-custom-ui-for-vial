@@ -152,6 +152,10 @@ class VialKeyboard {
     async ResetEeprom():Promise<void>{
         await this.Command([via_command_id.id_eeprom_reset]);
     }
+
+    GetHidName() {
+        return this.hid.getName()
+    }
 }
 
 export { VialKeyboard as ViaKeyboard };

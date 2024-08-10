@@ -33,6 +33,7 @@ function App() {
     [string, number, number, number?][]
   >([]);
   const [connected, setConnected] = useState(false);
+  const [kbName, setKbName] = useState("");
 
   useEffect(() => {
     // load wasm
@@ -61,6 +62,7 @@ function App() {
         setActiveMenu(undefined);
         setCustomValues({});
         setConnected(false);
+        setKbName("");
       }
     );
     const version = await via.GetProtocolVersion();
@@ -74,6 +76,7 @@ function App() {
     const parsed = Hjson.parse(jsonText);
     console.log(parsed);
     setCustomMenus(parsed?.menus ?? []);
+    setKbName(parsed?.name ?? via.GetHidName());
 
     const customValueId = (parsed.menus as MenuItemProperties[]).flatMap(
       (top) =>
@@ -115,6 +118,7 @@ function App() {
           <Button onClick={onOpenClick} variant="contained">
             Open
           </Button>
+          <ListSubheader>{kbName}</ListSubheader>
         </Toolbar>
         <Divider />
         <List>
@@ -138,25 +142,34 @@ function App() {
         </List>
         <Toolbar>
           <Stack spacing={1}>
-            <Stack direction={"row"} spacing={5}>
-            <Button
-              sx={{ display: connected ? "block" : "none" }}
-              variant="contained"
-              color="primary"
-              onClick={onSaveClick}
+            <Grid container rowSpacing={1}>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{ display: connected ? "block" : "none" }}
+                  variant="contained"
+                  color="primary"
+                  onClick={onSaveClick}
+                >
+                  Save
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{ display: connected ? "block" : "none" }}
+                  variant="contained"
+                  color="error"
+                  onClick={onEraseClick}
+                >
+                  Erase
+                </Button>
+              </Grid>
+            </Grid>
+            <Link
+              href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial"
+              target="_blank"
             >
-              Save
-            </Button>
-            <Button
-              sx={{ display: connected ? "block" : "none" }}
-              variant="contained"
-              color="error"
-              onClick={onEraseClick}
-            >
-              Erase
-            </Button>
-            </Stack>
-            <Link href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial" target="_blank">Usage</Link>
+              Usage
+            </Link>
           </Stack>
         </Toolbar>
       </Grid>
