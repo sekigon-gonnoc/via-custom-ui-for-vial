@@ -13,6 +13,9 @@ import {
   Grid,
   ListSubheader,
   Link,
+  Dialog,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { MenuItemProperties } from "./ViaMenuItem";
 
@@ -33,6 +36,7 @@ function App() {
   >([]);
   const [connected, setConnected] = useState(false);
   const [kbName, setKbName] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -109,6 +113,15 @@ function App() {
   };
 
   const onEraseClick = async () => {
+    setDialogOpen(true);
+  };
+
+  const onDialogClose = () => {
+    setDialogOpen(false);
+  };
+
+  const onDialogOkClick = async () => {
+    setDialogOpen(false);
     await via.ResetEeprom();
     await getCustomValues(customValueId);
   };
@@ -162,122 +175,131 @@ function App() {
   };
 
   return (
-    <Grid container spacing={2}>
-      <Grid item xs={3}>
-        <Toolbar>
-          <Button onClick={onOpenClick} variant="contained">
-            Open
-          </Button>
-          <ListSubheader>{kbName}</ListSubheader>
-        </Toolbar>
-        <Divider />
-        <List>
-          {customMenus.map((top) => (
-            <>
-              <ListSubheader> {top.label}</ListSubheader>
-              <List disablePadding>
-                {top.content.map((menu) => (
-                  <ListItemButton
-                    onClick={() => {
-                      setActiveMenu(menu);
-                    }}
-                  >
-                    <ListItemText primary={menu.label} />
-                  </ListItemButton>
-                ))}
-              </List>
-              <Divider />
-            </>
-          ))}
-        </List>
-        <Grid container rowSpacing={1} columnSpacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Button
-              sx={{
-                display: connected ? "block" : "none",
-                width: "100%",
-                ml: 1,
-              }}
-              variant="contained"
-              color="primary"
-              onClick={onSaveClick}
-            >
-              Save
+    <>
+      <Grid container spacing={2}>
+        <Grid item xs={3}>
+          <Toolbar>
+            <Button onClick={onOpenClick} variant="contained">
+              Open
             </Button>
+            <ListSubheader>{kbName}</ListSubheader>
+          </Toolbar>
+          <Divider />
+          <List>
+            {customMenus.map((top) => (
+              <>
+                <ListSubheader> {top.label}</ListSubheader>
+                <List disablePadding>
+                  {top.content.map((menu) => (
+                    <ListItemButton
+                      onClick={() => {
+                        setActiveMenu(menu);
+                      }}
+                    >
+                      <ListItemText primary={menu.label} />
+                    </ListItemButton>
+                  ))}
+                </List>
+                <Divider />
+              </>
+            ))}
+          </List>
+          <Grid container rowSpacing={1} columnSpacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Button
+                sx={{
+                  display: connected ? "block" : "none",
+                  width: "100%",
+                  ml: 1,
+                }}
+                variant="contained"
+                color="primary"
+                onClick={onSaveClick}
+              >
+                Save
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Button
+                sx={{
+                  display: connected ? "block" : "none",
+                  width: "100%",
+                }}
+                variant="contained"
+                color="error"
+                onClick={onEraseClick}
+              >
+                Erase
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Button
+                sx={{
+                  display: connected ? "block" : "none",
+                  width: "100%",
+                  ml: 1,
+                  mb: 1,
+                }}
+                variant="contained"
+                color="primary"
+                onClick={onDownloadJsonClick}
+              >
+                DL json
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Button
+                sx={{
+                  display: connected ? "block" : "none",
+                  width: "100%",
+                }}
+                variant="contained"
+                color="primary"
+                onClick={onUploadJsonClick}
+              >
+                UP json
+              </Button>
+              <input
+                type="file"
+                accept=".json"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <Button
-              sx={{
-                display: connected ? "block" : "none",
-                width: "100%",
-              }}
-              variant="contained"
-              color="error"
-              onClick={onEraseClick}
-            >
-              Erase
-            </Button>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Button
-              sx={{
-                display: connected ? "block" : "none",
-                width: "100%",
-                ml: 1,
-                mb: 1,
-              }}
-              variant="contained"
-              color="primary"
-              onClick={onDownloadJsonClick}
-            >
-              DL json
-            </Button>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Button
-              sx={{
-                display: connected ? "block" : "none",
-                width: "100%",
-              }}
-              variant="contained"
-              color="primary"
-              onClick={onUploadJsonClick}
-            >
-              UP json
-            </Button>
-            <input
-              type="file"
-              accept=".json"
-              ref={fileInputRef}
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-          </Grid>
+          <Divider />
+          <Link
+            href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial"
+            target="_blank"
+          >
+            Usage
+          </Link>
         </Grid>
-        <Divider />
-        <Link
-          href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial"
-          target="_blank"
-        >
-          Usage
-        </Link>
+        <Grid item xs={8}>
+          {activeMenu === undefined ? (
+            <></>
+          ) : (
+            <ViaMenuItem
+              {...activeMenu}
+              customValues={customValues}
+              onChange={async (id, value) => {
+                setCustomValues({ ...customValues, [id[0]]: value });
+                await via.SetCustomValue(id.slice(1) as number[], value);
+              }}
+            ></ViaMenuItem>
+          )}
+        </Grid>
+        <Grid item xs={1}></Grid>
       </Grid>
-      <Grid item xs={8}>
-        {activeMenu === undefined ? (
-          <></>
-        ) : (
-          <ViaMenuItem
-            {...activeMenu}
-            customValues={customValues}
-            onChange={async (id, value) => {
-              setCustomValues({ ...customValues, [id[0]]: value });
-              await via.SetCustomValue(id.slice(1) as number[], value);
-            }}
-          ></ViaMenuItem>
-        )}
-      </Grid>
-      <Grid item xs={1}></Grid>
-    </Grid>
+      <Dialog open={dialogOpen} onClose={onDialogClose}>
+        <DialogContent>Erase all settings?</DialogContent>
+        <DialogActions>
+          <Button color="error" onClick={onDialogClose}>Cancel</Button>
+          <Button color="primary" onClick={onDialogOkClick}>OK</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 
