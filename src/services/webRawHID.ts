@@ -16,6 +16,7 @@ class WebRawHID implements WebUsbComInterface {
   }
 
   setReceiveCallback(recvHandler: ((msg: Uint8Array) => void) | null) {
+    if (this.receiveCallback) this.port?.removeEventListener("inputreport", this.receiveCallback);
     this.receiveCallback = (e: HIDInputReportEvent) => {
       recvHandler?.(new Uint8Array((e.data as DataView).buffer));
     };
@@ -65,7 +66,7 @@ class WebRawHID implements WebUsbComInterface {
 
   async writeString(msg: string) {
     const encoder = new TextEncoder()
-    this.port?.sendReport(this.reportId,  encoder.encode(msg));
+    this.port?.sendReport(this.reportId, encoder.encode(msg));
   }
 
   async write(msg: Uint8Array) {
@@ -74,12 +75,10 @@ class WebRawHID implements WebUsbComInterface {
         .map((v) => v.toString(16))
         .join(" ")}`
     );
-    try{
-
-    await this.port?.sendReport(this.reportId, msg);
+    try {
+      await this.port?.sendReport(this.reportId, msg);
     }
-    catch (e)
-    {
+    catch (e) {
       console.error(e)
     }
   }

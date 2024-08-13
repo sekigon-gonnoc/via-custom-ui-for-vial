@@ -127,13 +127,32 @@ class VialKeyboard {
         const res_size = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_size]);
         const size = res_size[0] + (res_size[1] << 8) + (res_size[2] << 16) + (res_size[3] << 24);
 
-        let vial_def: number[] = [];
-        for (let page = 0; page < (size + VIAL_PAGE_SIZE - 1) / VIAL_PAGE_SIZE; page++) {
-            const res_def = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_def, page]);
-            vial_def = vial_def.concat(Array.from(res_def))
+        const page_len = Math.floor((size + VIAL_PAGE_SIZE - 1) / VIAL_PAGE_SIZE);
+        const vial_def: number[][] = [];
+        this.hid.setReceiveCallback(res => { console.log(res); vial_def.push(Array.from(res)) });
+
+        for (let page = 0; page < page_len; page++) {
+            await this.hid.write(Uint8Array.from([via_command_id.id_vial, vial_command_id.vial_get_def, page]));
         }
 
-        return Uint8Array.from(vial_def).slice(0, size);
+        const timeout_max = 3000;
+        let timeout = timeout_max;
+        let current_len = vial_def.length;
+        while (vial_def.length < page_len) {
+            await this.sleep(50);
+            if (current_len != vial_def.length) {
+                current_len = vial_def.length
+                timeout = timeout_max;
+            }
+            else {
+                timeout -= 50;
+                if (timeout < 0) { break; }
+            }
+        }
+
+        this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+
+        return Uint8Array.from(vial_def.flat()).slice(0, size);
     }
 
     async GetCustomValue(id: number[]): Promise<number> {
