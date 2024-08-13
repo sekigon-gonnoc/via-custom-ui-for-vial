@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import init, { xz_decompress } from "./pkg";
 import { ViaKeyboard } from "./services/vialKeyboad";
 import * as Hjson from "hjson";
-import { ViaMenuItem, MenuSectionProperties } from "./ViaMenuItem";
+import { ViaMenuItem, MenuSectionProperties } from "./components/ViaMenuItem";
 import {
   Button,
   Divider,
@@ -17,7 +17,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { MenuItemProperties } from "./ViaMenuItem";
+import { MenuItemProperties } from "./components/ViaMenuItem";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");
