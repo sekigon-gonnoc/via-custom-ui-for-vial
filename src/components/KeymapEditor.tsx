@@ -2,6 +2,7 @@ import { Button, FormControl, MenuItem, Select } from "@mui/material";
 import { match, P } from "ts-pattern";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { useEffect, useState } from "react";
+import { convertIntToKeycode, QmkKeycode } from "./keycodes/keycodeConverter";
 
 export interface KeymapProperties {
   via: ViaKeyboard;
@@ -37,7 +38,7 @@ interface KeymapKeyProperties {
   w: number;
   h: number;
   layout: number[];
-  keyLabel: string;
+  keycode: QmkKeycode;
 }
 
 export function KeymapKey(props: KeymapKeyProperties) {
@@ -73,7 +74,7 @@ export function KeymapKey(props: KeymapKeyProperties) {
             }
       }
     >
-      {props.keyLabel}
+      {props.keycode.label ?? props.keycode.aliases?.[0] ?? props.keycode.key}
     </div>
   );
 }
@@ -115,8 +116,9 @@ function convertToKeymapKeys(
               ...current,
               matrix: keyPos,
               layout: [],
-              keyLabel:
-                keymap[keyPos[1] + keyPos[0] * props.matrix.cols].toString(),
+              keycode: convertIntToKeycode(
+                keymap[keyPos[1] + keyPos[0] * props.matrix.cols]
+              ),
             });
             current.x += current.w;
             current.w = 1;

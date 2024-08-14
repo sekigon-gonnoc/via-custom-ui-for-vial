@@ -1,0 +1,118 @@
+{
+  "QK_BASIC": {
+    "start": 0,
+    "end": 255
+  },
+  "QK_MODS": {
+    "start": 256,
+    "end": 8191
+  },
+  "QK_MOD_TAP": {
+    "start": 8192,
+    "end": 16383
+  },
+  "QK_LAYER_TAP": {
+    "start": 16384,
+    "end": 20479
+  },
+  "QK_LAYER_MOD": {
+    "start": 20480,
+    "end": 20991
+  },
+  "QK_TO": {
+    "start": 20992,
+    "end": 21023
+  },
+  "QK_MOMENTARY": {
+    "start": 21024,
+    "end": 21055
+  },
+  "QK_DEF_LAYER": {
+    "start": 21056,
+    "end": 21087
+  },
+  "QK_TOGGLE_LAYER": {
+    "start": 21088,
+    "end": 21119
+  },
+  "QK_ONE_SHOT_LAYER": {
+    "start": 21120,
+    "end": 21151
+  },
+  "QK_ONE_SHOT_MOD": {
+    "start": 21152,
+    "end": 21183
+  },
+  "QK_LAYER_TAP_TOGGLE": {
+    "start": 21184,
+    "end": 21215
+  },
+  "QK_SWAP_HANDS": {
+    "start": 22016,
+    "end": 22271
+  },
+  "QK_TAP_DANCE": {
+    "start": 22272,
+    "end": 22527
+  },
+  "QK_MAGIC": {
+    "start": 28672,
+    "end": 28927
+  },
+  "QK_MIDI": {
+    "start": 28928,
+    "end": 29183
+  },
+  "QK_SEQUENCER": {
+    "start": 29184,
+    "end": 29695
+  },
+  "QK_JOYSTICK": {
+    "start": 29696,
+    "end": 29759
+  },
+  "QK_PROGRAMMABLE_BUTTON": {
+    "start": 29760,
+    "end": 29823
+  },
+  "QK_AUDIO": {
+    "start": 29824,
+    "end": 29887
+  },
+  "QK_STENO": {
+    "start": 29888,
+    "end": 29951
+  },
+  "QK_MACRO": {
+    "start": 30464,
+    "end": 30591
+  },
+  "QK_LIGHTING": {
+    "start": 30720,
+    "end": 30975
+  },
+  "QK_QUANTUM": {
+    "start": 31744,
+    "end": 32255
+  },
+  "QK_KB": {
+    "start": 32256,
+    "end": 32319
+  },
+  "QK_USER": {
+    "start": 32320,
+    "end": 32767
+  },
+  "QK_UNICODEMAP": {
+    "start": 32768,
+    "end": 49151
+  },
+  "QK_UNICODE": {
+    "start": 32768,
+    "end": 65535
+  },
+  "QK_UNICODEMAP_PAIR": {
+    "start": 49152,
+    "end": 65535
+  }
+}
