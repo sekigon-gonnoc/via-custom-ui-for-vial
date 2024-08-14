@@ -22,8 +22,8 @@ export interface KeymapProperties {
               h?: number;
             }
         )[][];
-    customKeycodes?: { name: string; title: string; shortName: string }[];
   };
+  customKeycodes?: { name: string; title: string; shortName: string }[];
 }
 
 interface KeymapKeyProperties {
@@ -49,34 +49,34 @@ export function KeymapKey(props: KeymapKeyProperties) {
       style={
         props.r != 0
           ? {
-              position: "fixed",
+              position: 'fixed',
               top: (props.ry + props.offsety) * WIDTH_1U,
               left: (props.rx + props.offsetx) * WIDTH_1U,
               width: props.w * WIDTH_1U - 3,
               height: props.h * WIDTH_1U - 3,
-              outline: "solid",
-              outlineWidth: "1px",
-              outlineColor: "black",
+              outline: 'solid',
+              outlineWidth: '1px',
+              outlineColor: 'black',
               transform: `rotate(${props.r}deg)`,
-              transformOrigin: `${-props.offsetx * WIDTH_1U}px ${
-                -props.offsety * WIDTH_1U
-              }px`,
+              transformOrigin: `${-props.offsetx * WIDTH_1U}px ${-props.offsety * WIDTH_1U}px`,
             }
           : {
-              position: "fixed",
+              position: 'fixed',
               top: props.y * WIDTH_1U,
               left: props.x * WIDTH_1U,
               width: props.w * WIDTH_1U - 3,
               height: props.h * WIDTH_1U - 3,
-              outline: "solid",
-              outlineWidth: "1px",
-              outlineColor: "black",
+              outline: 'solid',
+              outlineWidth: '1px',
+              outlineColor: 'black',
             }
       }
     >
+      {props.keycode.modLabel ?? ''}
       {props.keycode.label ?? props.keycode.aliases?.[0] ?? props.keycode.key}
+      {props.keycode.holdLabel ?? ''}
     </div>
-  );
+  )
 }
 
 function convertToKeymapKeys(
@@ -117,7 +117,8 @@ function convertToKeymapKeys(
               matrix: keyPos,
               layout: [],
               keycode: convertIntToKeycode(
-                keymap[keyPos[1] + keyPos[0] * props.matrix.cols]
+                keymap[keyPos[1] + keyPos[0] * props.matrix.cols],
+                props.customKeycodes
               ),
             });
             current.x += current.w;
