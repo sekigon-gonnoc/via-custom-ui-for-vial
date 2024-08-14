@@ -26,6 +26,14 @@ enum via_command_id {
     id_unhandled = 0xFF,
 }
 
+enum via_keyboard_value_id {
+    id_uptime              = 0x01,
+    id_layout_options      = 0x02,
+    id_switch_matrix_state = 0x03,
+    id_firmware_version    = 0x04,
+    id_device_indication   = 0x05,
+}
+
 enum vial_command_id {
     vial_get_keyboard_id = 0x00,
     vial_get_size = 0x01,
@@ -116,6 +124,11 @@ class VialKeyboard {
     async GetProtocolVersion() {
         const res = await this.Command([via_command_id.id_get_protocol_version])
         return res ? (res[2] | (res[3] << 8)) : 0;
+    }
+
+    async GetLayoutOption() {
+        const res = await this.Command([via_command_id.id_get_keyboard_value, via_keyboard_value_id.id_layout_options])
+        return res ? (res[5] | (res[4] << 8) | (res[3] << 16) | (res[2] << 24)) : 0;
     }
 
     async GetVialKeyboardId() {

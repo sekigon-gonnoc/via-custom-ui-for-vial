@@ -1,6 +1,10 @@
+import { FormControl, MenuItem, Select } from "@mui/material";
 import { match, P } from "ts-pattern";
+import { ViaKeyboard } from "../services/vialKeyboad";
+import { useEffect, useState } from "react";
 
 export interface KeymapProperties {
+  via: ViaKeyboard,
   layouts: {
     labels?: string[][];
     keymap:
@@ -31,6 +35,7 @@ export function KeymapKey(props: KeymapKeyProperties) {
   const WIDTH_1U = 50;
   return (
     <div
+      key={`${props.matrix[0]}-${props.matrix[1]}`}
       style={
         props.r != 0
           ? {
@@ -43,7 +48,9 @@ export function KeymapKey(props: KeymapKeyProperties) {
               outlineWidth: "1px",
               outlineColor: "black",
               transform: `rotate(${props.r}deg)`,
-              transformOrigin: `${-props.offsetx * WIDTH_1U}px ${-props.offsety * WIDTH_1U}px`,
+              transformOrigin: `${-props.offsetx * WIDTH_1U}px ${
+                -props.offsety * WIDTH_1U
+              }px`,
             }
           : {
               position: "fixed",
@@ -92,7 +99,7 @@ function convertToKeymapKeys(
                 .split("\n")[0]
                 .split(",")
                 .map((v) => parseInt(v))
-                .slice(2),
+                .slice(0,2),
               layout: [],
             });
             current.x += 1;
@@ -116,10 +123,56 @@ function convertToKeymapKeys(
   return keys;
 }
 
-export function KeymapEditor(props: KeymapProperties) {
+function LayoutSelector(props: {
+  via: ViaKeyboard;
+  layouts: {
+    labels?: string[][];
+  };
+  option: { [layout: number]: number };
+  onChange: (option: { [layout: number]: number }) => void;
+}) {
   return (
-    <div style={{ contain: "layout", marginTop: 50 }}>
-      {convertToKeymapKeys(props, { 0: 2 }).map((p) => KeymapKey(p))}
+    <FormControl variant="standard">
+      <Select
+        value={props.option[0]}
+        label="layout"
+        onChange={(event) =>
+          props.onChange({ 0: parseInt(event.target.value) })
+        }
+      >
+        {props.layouts.labels[0]?.slice(1).map((label, index) => (
+          <MenuItem key={label} value={index}>
+            {label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+}
+
+export function KeymapEditor(props: KeymapProperties) {
+  const [layoutOption, setLayoutOption] = useState<{
+    [layout: number]: number;
+  }>({ 0: 0 });
+
+  useEffect(() => {
+    (async () => {
+      const layout = await props.via.GetLayoutOption();
+      setLayoutOption({ 0: layout });
+    })();
+  }, [props.layouts]);
+
+  return (
+    <div>
+      <LayoutSelector
+        via={props.via}
+        layouts={props.layouts}
+        option={layoutOption}
+        onChange={(option) => {setLayoutOption(option)}}
+      />
+      <div style={{ contain: "layout", marginTop: 50 }}>
+        {convertToKeymapKeys(props, layoutOption).map((p) => KeymapKey(p))}
+      </div>
     </div>
   );
 }

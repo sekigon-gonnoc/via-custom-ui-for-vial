@@ -306,7 +306,7 @@ function App() {
         <Grid item xs={8}>
           {match(activeMenu)
             .with(undefined, () => <></>)
-            .with({ menuType: "customMenu"}, (menu) => (
+            .with({ menuType: "customMenu" }, (menu) => (
               <ViaMenuItem
                 {...menu.menu}
                 customValues={customValues}
@@ -316,8 +316,8 @@ function App() {
                 }}
               ></ViaMenuItem>
             ))
-            .with({ menuType: "keymap"  }, (menu) => (
-              <KeymapEditor {...menu.menu}></KeymapEditor>
+            .with({ menuType: "keymap" }, (menu) => (
+              <KeymapEditor {...menu.menu} via={via}></KeymapEditor>
             ))
             .exhaustive()}
         </Grid>
