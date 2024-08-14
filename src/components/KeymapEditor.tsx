@@ -27,29 +27,30 @@ export interface KeymapProperties {
 }
 
 interface KeymapKeyProperties {
-  matrix: number[];
-  x: number;
-  y: number;
-  offsetx: number;
-  offsety: number;
-  r: number;
-  rx: number;
-  ry: number;
-  w: number;
-  h: number;
-  layout: number[];
-  keycode: QmkKeycode;
+  matrix: number[]
+  x: number
+  y: number
+  offsetx: number
+  offsety: number
+  r: number
+  rx: number
+  ry: number
+  w: number
+  h: number
+  layout: number[]
+  keycode: QmkKeycode
+  onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void
 }
 
+const WIDTH_1U = 50;
 export function KeymapKey(props: KeymapKeyProperties) {
-  const WIDTH_1U = 50;
   return (
     <div
       key={`${props.matrix[0]}-${props.matrix[1]}`}
       style={
         props.r != 0
           ? {
-              position: 'fixed',
+              position: 'absolute',
               top: (props.ry + props.offsety) * WIDTH_1U,
               left: (props.rx + props.offsetx) * WIDTH_1U,
               width: props.w * WIDTH_1U - 3,
@@ -61,7 +62,7 @@ export function KeymapKey(props: KeymapKeyProperties) {
               transformOrigin: `${-props.offsetx * WIDTH_1U}px ${-props.offsety * WIDTH_1U}px`,
             }
           : {
-              position: 'fixed',
+              position: 'absolute',
               top: props.y * WIDTH_1U,
               left: props.x * WIDTH_1U,
               width: props.w * WIDTH_1U - 3,
@@ -71,10 +72,38 @@ export function KeymapKey(props: KeymapKeyProperties) {
               outlineColor: 'black',
             }
       }
+      onDragOver={(event) => {
+        event.preventDefault()
+      }}
+      onDrop={(event)=>{
+        event.preventDefault();
+        const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"))
+        props.onKeycodeChange?.(props, keycode);
+      }}
     >
       {props.keycode.modLabel ?? ''}
       {props.keycode.label ?? props.keycode.aliases?.[0] ?? props.keycode.key}
       {props.keycode.holdLabel ?? ''}
+    </div>
+  )
+}
+
+function KeyListKey(props: { keycode: QmkKeycode }) {
+  return (
+    <div
+      style={{
+        width: WIDTH_1U - 3,
+        height: WIDTH_1U - 3,
+        outline: 'solid',
+        outlineWidth: '1px',
+        outlineColor: 'black',
+      }}
+      draggable={true}
+      onDragStart={(event) => {
+        event.dataTransfer.setData('QmkKeycode', JSON.stringify(props.keycode))
+      }}
+    >
+      {props.keycode.label ?? props.keycode.aliases?.[0] ?? props.keycode.key}
     </div>
   )
 }
@@ -189,6 +218,24 @@ function LayerSelector(props: {layerCount:number, onChange:(layer:number)=>void}
   );
 }
 
+function KeymapLayer(props: {
+  keymapProps: KeymapProperties
+  layoutOption: { [layout: number]: number }
+  keymap: number[]
+  onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void
+}) {
+  return (
+    <div style={{ position: 'relative', marginTop: 50 }}>
+      {convertToKeymapKeys(props.keymapProps, props.layoutOption, props.keymap).map((p) =>
+        KeymapKey({
+          ...p,
+          onKeycodeChange: props.onKeycodeChange,
+        }),
+      )}
+    </div>
+  )
+}
+
 export function KeymapEditor(props: KeymapProperties) {
   const [layoutOption, setLayoutOption] = useState<{
     [layout: number]: number;
@@ -217,41 +264,54 @@ export function KeymapEditor(props: KeymapProperties) {
   }, [props.layouts]);
 
   return (
-    <div>
-      <LayoutSelector
-        via={props.via}
-        layouts={props.layouts}
-        option={layoutOption}
-        onChange={(option) => {
-          setLayoutOption(option);
-        }}
-      />
-      <LayerSelector
-        layerCount={layerCount}
-        onChange={async (layer) => {
-          if (!Object.keys(keymap).includes(layer.toString())) {
-            const layerKeys = await props.via.GetLayer(layer, {
-              row: props.matrix.rows,
-              col: props.matrix.cols,
-            });
-            keymap[layer] = layerKeys;
-            setKeymap(keymap);
-            console.log(`load keymap ${layer}`);
-            console.log(layerKeys);
-          }
-          setLayer(layer);
-
-        }}
-      ></LayerSelector>
-      {Object.keys(keymap).includes(layer.toString()) ? (
-        <div style={{ contain: "layout", marginTop: 50 }}>
-          {convertToKeymapKeys(props, layoutOption, keymap[layer]).map((p) =>
-            KeymapKey(p)
-          )}
-        </div>
-      ) : (
-        <></>
-      )}
-    </div>
-  );
+    <>
+      <div>
+        <LayoutSelector
+          via={props.via}
+          layouts={props.layouts}
+          option={layoutOption}
+          onChange={(option) => {
+            setLayoutOption(option)
+          }}
+        />
+        <LayerSelector
+          layerCount={layerCount}
+          onChange={async (layer) => {
+            if (!Object.keys(keymap).includes(layer.toString())) {
+              const layerKeys = await props.via.GetLayer(layer, {
+                row: props.matrix.rows,
+                col: props.matrix.cols,
+              })
+              const newKeymap = { ...keymap }
+              newKeymap[layer] = layerKeys
+              setKeymap(newKeymap)
+              console.log(`load keymap ${layer}`)
+              console.log(layerKeys)
+            }
+            setLayer(layer)
+          }}
+        ></LayerSelector>
+        {Object.keys(keymap).includes(layer.toString()) ? (
+          <KeymapLayer
+            keymapProps={props}
+            layoutOption={layoutOption}
+            keymap={keymap[layer]}
+            onKeycodeChange={(target, newKeycode) => {
+              const offset = props.matrix.cols * target.matrix[0] + target.matrix[1]
+              const newKeymap = { ...keymap }
+              newKeymap[layer][offset] = newKeycode.value
+              setKeymap(newKeymap)
+              setLayer(layer)
+              console.log(`update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`)
+            }}
+          ></KeymapLayer>
+        ) : (
+          <></>
+        )}
+      </div>
+      <div style={{ marginTop: 400 }}>
+        <KeyListKey keycode={convertIntToKeycode(4)}></KeyListKey>
+      </div>
+    </>
+  )
 }

@@ -9,7 +9,7 @@ const keycode_range: { [range: string]: { start: number; end: number } } =
   quantum_keycode_range_0_0_3
 
 export type QmkKeycode = {
-  val: number
+  value: number
   group?: string
   key: string
   label?: string
@@ -42,9 +42,9 @@ export function convertIntToKeycode(
     val - keycode_range.QK_KB.start < customKeycodes.length
   ) {
     const customKey = customKeycodes[val - keycode_range.QK_KB.start]
-    return { val: val, key: customKey.name, label: customKey.shortName }
+    return { value: val, key: customKey.name, label: customKey.shortName }
   } else if (Object.keys(keycodes).includes(val.toString())) {
-    return { ...keycodes[val.toString()], val: val }
+    return { ...keycodes[val.toString()], value: val }
   } else {
     return match(val)
       .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
