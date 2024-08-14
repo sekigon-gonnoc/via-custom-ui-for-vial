@@ -20,6 +20,7 @@ import {
 import { MenuItemProperties } from "./components/ViaMenuItem";
 import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
 import { match, P } from "ts-pattern";
+import { act } from "react-dom/test-utils";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");
@@ -28,7 +29,7 @@ if (!(navigator as any).hid) {
 const via = new ViaKeyboard();
 
 function App() {
-  const [vialJson, setVialJson] = useState(undefined);
+  const [vialJson, setVialJson] = useState<any>(undefined);
   const [customMenus, setCustomMenus] = useState<MenuItemProperties[]>([]);
   const [activeMenu, setActiveMenu] = useState<
     | {
@@ -316,10 +317,19 @@ function App() {
                 }}
               ></ViaMenuItem>
             ))
-            .with({ menuType: "keymap" }, (menu) => (
-              <KeymapEditor {...menu.menu} via={via}></KeymapEditor>
-            ))
+            .with({ menuType: "keymap" }, (menu) => <></>)
             .exhaustive()}
+          {vialJson === undefined ? (
+            <></>
+          ) : (
+            <div
+              style={{
+                display: activeMenu?.menuType === "keymap" ? "block" : "none",
+              }}
+            >
+              <KeymapEditor {...vialJson!} via={via}></KeymapEditor>
+            </div>
+          )}
         </Grid>
         <Grid item xs={1}></Grid>
       </Grid>

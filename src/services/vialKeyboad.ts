@@ -107,18 +107,20 @@ class VialKeyboard {
     }
 
     async Command(msg: ArrayLike<number>) {
-        if (!this.hid.connected) await this.Open();
-        const send = Uint8Array.from(msg);
-        try {
-            await this.hid.write(Uint8Array.from(send));
-        } catch (error) {
-            await this.hid.close()
-            throw error;
-        }
-        const res = await this.readResponse(500);
-        console.log(`received: ${res}`)
+        return navigator.locks.request("vial-keyboard", async () => {
+            if (!this.hid.connected) await this.Open();
+            const send = Uint8Array.from(msg);
+            try {
+                await this.hid.write(Uint8Array.from(send));
+            } catch (error) {
+                await this.hid.close()
+                throw error;
+            }
+            const res = await this.readResponse(500);
+            console.log(`received: ${res}`)
 
-        return res;
+            return res
+        });
     }
 
     async GetProtocolVersion() {
@@ -142,30 +144,86 @@ class VialKeyboard {
 
         const page_len = Math.floor((size + VIAL_PAGE_SIZE - 1) / VIAL_PAGE_SIZE);
         const vial_def: number[][] = [];
-        this.hid.setReceiveCallback(res => { console.log(res); vial_def.push(Array.from(res)) });
 
-        for (let page = 0; page < page_len; page++) {
-            await this.hid.write(Uint8Array.from([via_command_id.id_vial, vial_command_id.vial_get_def, page]));
-        }
+        await navigator.locks.request("vial-keyboard", async () => {
+            this.hid.setReceiveCallback(res => { console.log(res); vial_def.push(Array.from(res)) });
 
-        const timeout_max = 3000;
-        let timeout = timeout_max;
-        let current_len = vial_def.length;
-        while (vial_def.length < page_len) {
-            await this.sleep(50);
-            if (current_len != vial_def.length) {
-                current_len = vial_def.length
-                timeout = timeout_max;
+            for (let page = 0; page < page_len; page++) {
+                await this.hid.write(Uint8Array.from([via_command_id.id_vial, vial_command_id.vial_get_def, page]));
             }
-            else {
-                timeout -= 50;
-                if (timeout < 0) { break; }
-            }
-        }
 
-        this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+            const timeout_max = 3000;
+            let timeout = timeout_max;
+            let current_len = vial_def.length;
+            while (vial_def.length < page_len) {
+                await this.sleep(50);
+                if (current_len != vial_def.length) {
+                    current_len = vial_def.length
+                    timeout = timeout_max;
+                }
+                else {
+                    timeout -= 50;
+                    if (timeout < 0) { break; }
+                }
+            }
+
+            this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+        });
 
         return Uint8Array.from(vial_def.flat()).slice(0, size);
+    }
+
+    async GetLayerCount() {
+        const res = await this.Command([via_command_id.id_dynamic_keymap_get_layer_count]);
+        return res ? res[1] : 1;
+    }
+
+    async GetLayer(layer: number, matrix_definition: { row: number, col: number }): Promise<number[]> {
+        const matrix_len = matrix_definition.row * matrix_definition.col * 2; // 2byte per key
+        const start = layer * matrix_len;
+
+        const page_len = Math.ceil(matrix_len / 28);
+        const keymap_buffer: number[][] = [];
+
+        await navigator.locks.request("vial-keyboard", async () => {
+            this.hid.setReceiveCallback(res => { console.log(res); keymap_buffer.push(Array.from(res.slice(4))) });
+
+            for (let page = 0; page < page_len; page++) {
+                await this.hid.write(Uint8Array.from([via_command_id.id_dynamic_keymap_get_buffer,
+                (start + page * 28) >> 8, (start + page * 28) & 0xff, 28])
+                )
+            }
+
+            const timeout_max = 3000;
+            let timeout = timeout_max;
+            let current_len = keymap_buffer.length;
+            while (keymap_buffer.length < page_len) {
+                await this.sleep(50);
+                if (current_len != keymap_buffer.length) {
+                    current_len = keymap_buffer.length
+                    timeout = timeout_max;
+                }
+                else {
+                    timeout -= 50;
+                    if (timeout < 0) { break; }
+                }
+            }
+
+            this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+        }
+        );
+
+        console.log(keymap_buffer);
+
+        return keymap_buffer.flat().reduce((p: number[], c, i) => {
+            if (i & 1) {
+                const b = p.pop();
+                p.push((b! << 8) | c);
+            } else {
+                p.push(c);
+            }
+            return p;
+        }, []);
     }
 
     async GetCustomValue(id: number[]): Promise<number> {

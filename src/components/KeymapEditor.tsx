@@ -1,19 +1,27 @@
-import { FormControl, MenuItem, Select } from "@mui/material";
+import { Button, FormControl, MenuItem, Select } from "@mui/material";
 import { match, P } from "ts-pattern";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { useEffect, useState } from "react";
 
 export interface KeymapProperties {
-  via: ViaKeyboard,
+  via: ViaKeyboard;
+  matrix: { rows: number; cols: number };
   layouts: {
     labels?: string[][];
     keymap:
       | (
           | string
-          | { x?: number; y?: number; r?:number, rx?: number; ry?: number; w?: number, h?:number }
+          | {
+              x?: number;
+              y?: number;
+              r?: number;
+              rx?: number;
+              ry?: number;
+              w?: number;
+              h?: number;
+            }
         )[][];
-    customKeycodes?:
-      | { name: string; title: string; shortName: string }[];
+    customKeycodes?: { name: string; title: string; shortName: string }[];
   };
 }
 
@@ -29,6 +37,7 @@ interface KeymapKeyProperties {
   w: number;
   h: number;
   layout: number[];
+  keyLabel: string;
 }
 
 export function KeymapKey(props: KeymapKeyProperties) {
@@ -63,13 +72,16 @@ export function KeymapKey(props: KeymapKeyProperties) {
               outlineColor: "black",
             }
       }
-    ></div>
+    >
+      {props.keyLabel}
+    </div>
   );
 }
 
 function convertToKeymapKeys(
-  keymap: KeymapProperties,
-  layoutOptions: { [layout: number]: number }
+  props: KeymapProperties,
+  layoutOptions: { [layout: number]: number },
+  keymap: number[]
 ): KeymapKeyProperties[] {
   let current = {
     x: 0,
@@ -83,7 +95,7 @@ function convertToKeymapKeys(
     h: 1,
   };
   const keys: KeymapKeyProperties[] = [];
-  for (const row of keymap.layouts.keymap) {
+  for (const row of props.layouts.keymap) {
     for (const col of row) {
       match(col)
         .with(P.string, (col) => {
@@ -91,18 +103,24 @@ function convertToKeymapKeys(
             .split("\n")[3]
             ?.split(",")
             ?.map((s) => parseInt(s));
+
+              const keyPos = col
+                .split("\n")[0]
+                .split(",")
+                .map((v) => parseInt(v))
+                .slice(0, 2);
           if (layoutOptions[layout[0]]==layout[1])
           {
             keys.push({
               ...current,
-              matrix: col
-                .split("\n")[0]
-                .split(",")
-                .map((v) => parseInt(v))
-                .slice(0,2),
+              matrix: keyPos,
               layout: [],
+              keyLabel:
+                keymap[keyPos[1] + keyPos[0] * props.matrix.cols].toString(),
             });
-            current.x += 1;
+            current.x += current.w;
+            current.w = 1;
+            current.h = 1;
           }
         })
         .with(P._, (col) => {
@@ -150,16 +168,49 @@ function LayoutSelector(props: {
   );
 }
 
+function LayerSelector(props: {layerCount:number, onChange:(layer:number)=>void})
+{
+  return (
+    <>
+      {[...Array(props.layerCount)].map((_, idx) => {
+        return <Button
+          value={idx}
+          onClick={(event) => {
+            props.onChange(event.target.value);
+          }}
+        >
+          {idx}
+        </Button>;
+      })}
+    </>
+  );
+}
+
 export function KeymapEditor(props: KeymapProperties) {
   const [layoutOption, setLayoutOption] = useState<{
     [layout: number]: number;
   }>({ 0: 0 });
+  const [layerCount, setLayerCount] = useState(1);
+  const [layer, setLayer] = useState(0);
+  const [keymap, setKeymap] = useState<{ [layer: number]: number[] }>({});
 
   useEffect(() => {
-    (async () => {
+    navigator.locks.request("load-layout", async () => {
       const layout = await props.via.GetLayoutOption();
       setLayoutOption({ 0: layout });
-    })();
+      const layer = await props.via.GetLayerCount();
+      setLayerCount(layer);
+      setLayer(0);
+      if (!Object.keys(keymap).includes("0")) {
+        const layerKeys = await props.via.GetLayer(0, {
+          row: props.matrix.rows,
+          col: props.matrix.cols,
+        });
+        setKeymap({ ...keymap, 0: layerKeys });
+        console.log("load keymap 0");
+        console.log(layerKeys);
+      }
+    });
   }, [props.layouts]);
 
   return (
@@ -168,11 +219,36 @@ export function KeymapEditor(props: KeymapProperties) {
         via={props.via}
         layouts={props.layouts}
         option={layoutOption}
-        onChange={(option) => {setLayoutOption(option)}}
+        onChange={(option) => {
+          setLayoutOption(option);
+        }}
       />
-      <div style={{ contain: "layout", marginTop: 50 }}>
-        {convertToKeymapKeys(props, layoutOption).map((p) => KeymapKey(p))}
-      </div>
+      <LayerSelector
+        layerCount={layerCount}
+        onChange={async (layer) => {
+          if (!Object.keys(keymap).includes(layer.toString())) {
+            const layerKeys = await props.via.GetLayer(layer, {
+              row: props.matrix.rows,
+              col: props.matrix.cols,
+            });
+            keymap[layer] = layerKeys;
+            setKeymap(keymap);
+            console.log(`load keymap ${layer}`);
+            console.log(layerKeys);
+          }
+          setLayer(layer);
+
+        }}
+      ></LayerSelector>
+      {Object.keys(keymap).includes(layer.toString()) ? (
+        <div style={{ contain: "layout", marginTop: 50 }}>
+          {convertToKeymapKeys(props, layoutOption, keymap[layer]).map((p) =>
+            KeymapKey(p)
+          )}
+        </div>
+      ) : (
+        <></>
+      )}
     </div>
   );
 }
