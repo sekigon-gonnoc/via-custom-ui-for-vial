@@ -18,6 +18,8 @@ import {
   DialogActions,
 } from "@mui/material";
 import { MenuItemProperties } from "./components/ViaMenuItem";
+import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
+import { match, P } from "ts-pattern";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");
@@ -26,8 +28,18 @@ if (!(navigator as any).hid) {
 const via = new ViaKeyboard();
 
 function App() {
+  const [vialJson, setVialJson] = useState(undefined);
   const [customMenus, setCustomMenus] = useState<MenuItemProperties[]>([]);
-  const [activeMenu, setActiveMenu] = useState<MenuSectionProperties>();
+  const [activeMenu, setActiveMenu] = useState<
+    | {
+        menuType: "customMenu";
+        menu: MenuSectionProperties;
+      }
+    | {
+        menuType: "keymap";
+        menu: KeymapProperties;
+      }
+  >();
   const [customValues, setCustomValues] = useState<{ [id: string]: number }>(
     {}
   );
@@ -62,6 +74,7 @@ function App() {
         setConnected(true);
       },
       () => {
+        setVialJson(undefined);
         setCustomMenus([]);
         setActiveMenu(undefined);
         setCustomValues({});
@@ -79,6 +92,7 @@ function App() {
     console.log(jsonText);
     const parsed = Hjson.parse(jsonText);
     console.log(parsed);
+    setVialJson(parsed);
     setCustomMenus(parsed?.menus ?? []);
     setKbName(parsed?.name ?? via.GetHidName());
 
@@ -186,6 +200,19 @@ function App() {
           </Toolbar>
           <Divider />
           <List>
+            <div style={{ display: connected ? "block" : "none" }}>
+              <ListSubheader>Keymap</ListSubheader>
+              <List disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    setActiveMenu({ menuType: "keymap", menu: vialJson! });
+                  }}
+                >
+                  <ListItemText primary="Keymap" />
+                </ListItemButton>
+              </List>
+            </div>
+            <Divider />
             {customMenus.map((top) => (
               <>
                 <ListSubheader> {top.label}</ListSubheader>
@@ -193,7 +220,7 @@ function App() {
                   {top.content.map((menu) => (
                     <ListItemButton
                       onClick={() => {
-                        setActiveMenu(menu);
+                        setActiveMenu({ menuType: "customMenu", menu: menu });
                       }}
                     >
                       <ListItemText primary={menu.label} />
@@ -277,26 +304,34 @@ function App() {
           </Link>
         </Grid>
         <Grid item xs={8}>
-          {activeMenu === undefined ? (
-            <></>
-          ) : (
-            <ViaMenuItem
-              {...activeMenu}
-              customValues={customValues}
-              onChange={async (id, value) => {
-                setCustomValues({ ...customValues, [id[0]]: value });
-                await via.SetCustomValue(id.slice(1) as number[], value);
-              }}
-            ></ViaMenuItem>
-          )}
+          {match(activeMenu)
+            .with(undefined, () => <></>)
+            .with({ menuType: "customMenu"}, (menu) => (
+              <ViaMenuItem
+                {...menu.menu}
+                customValues={customValues}
+                onChange={async (id, value) => {
+                  setCustomValues({ ...customValues, [id[0]]: value });
+                  await via.SetCustomValue(id.slice(1) as number[], value);
+                }}
+              ></ViaMenuItem>
+            ))
+            .with({ menuType: "keymap"  }, (menu) => (
+              <KeymapEditor {...menu.menu}></KeymapEditor>
+            ))
+            .exhaustive()}
         </Grid>
         <Grid item xs={1}></Grid>
       </Grid>
       <Dialog open={dialogOpen} onClose={onDialogClose}>
         <DialogContent>Erase all settings?</DialogContent>
         <DialogActions>
-          <Button color="error" onClick={onDialogClose}>Cancel</Button>
-          <Button color="primary" onClick={onDialogOkClick}>OK</Button>
+          <Button color="error" onClick={onDialogClose}>
+            Cancel
+          </Button>
+          <Button color="primary" onClick={onDialogOkClick}>
+            OK
+          </Button>
         </DialogActions>
       </Dialog>
     </>

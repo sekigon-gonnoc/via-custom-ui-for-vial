@@ -15,7 +15,7 @@ import { MuiColorInput, MuiColorInputColors } from "mui-color-input";
 import { ChangeEvent, SyntheticEvent } from "react";
 import evaluate from "simple-evaluate";
 
-export interface MenuItemProperties {
+interface MenuItemProperties {
   label: string;
   content: MenuSectionProperties[];
 }
@@ -88,7 +88,7 @@ type MenuElementProperties =
   | ButtonElement
   | MultipleCheckboxElement;
 
-export type MenuSectionProperties = {
+type MenuSectionProperties = {
   label: string;
   content: (MenuElementProperties | ShowIfElement)[];
   customValues: { [id: string]: number };
@@ -420,3 +420,5 @@ function ViaMenuItem(props: MenuSectionProperties) {
 }
 
 export { ViaMenuItem };
+export type { MenuItemProperties, MenuSectionProperties };
+
