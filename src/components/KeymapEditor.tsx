@@ -1,8 +1,8 @@
-import { Button, FormControl, MenuItem, Select } from "@mui/material";
+import { Autocomplete, Box, Button, ClickAwayListener, FormControl, MenuItem, Popper, Select, TextField } from "@mui/material";
 import { match, P } from "ts-pattern";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { useEffect, useState } from "react";
-import { convertIntToKeycode, QmkKeycode } from "./keycodes/keycodeConverter";
+import { convertIntToKeycode, DefaultQmkKeycode, getTapKeycodes, QmkKeycode } from "./keycodes/keycodeConverter";
 
 export interface KeymapProperties {
   via: ViaKeyboard;
@@ -40,6 +40,7 @@ interface KeymapKeyProperties {
   layout: number[]
   keycode: QmkKeycode
   onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void
+  onClick?: (target: HTMLElement) => void
 }
 
 const WIDTH_1U = 50;
@@ -75,16 +76,71 @@ export function KeymapKey(props: KeymapKeyProperties) {
       onDragOver={(event) => {
         event.preventDefault()
       }}
-      onDrop={(event)=>{
-        event.preventDefault();
-        const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"))
-        props.onKeycodeChange?.(props, keycode);
+      onDrop={(event) => {
+        event.preventDefault()
+        const keycode = JSON.parse(event.dataTransfer.getData('QmkKeycode'))
+        props.onKeycodeChange?.(props, keycode)
       }}
+      onClick={(event) => props.onClick?.(event.currentTarget)}
     >
       {props.keycode.modLabel ?? ''}
-      {props.keycode.label ?? props.keycode.aliases?.[0] ?? props.keycode.key}
+      {props.keycode.label}
       {props.keycode.holdLabel ?? ''}
     </div>
+  )
+}
+
+function KeymapKeyPopUp(props: {
+  open: boolean
+  anchor?: HTMLElement
+  keymapKey?: KeymapKeyProperties
+  onClickAway?: () => void
+  onChange?: (event: { keymapkey?: KeymapKeyProperties; keycode: QmkKeycode }) => void
+}) {
+  const [value, setValue] = useState<QmkKeycode>(props.keymapKey?.keycode ?? DefaultQmkKeycode)
+  const [inputValue, setInputValue] = useState<string>(props.keymapKey?.keycode.label ?? '')
+  useEffect(() => {
+    setValue(props.keymapKey?.keycode ?? DefaultQmkKeycode)
+    setInputValue(props.keymapKey?.keycode.label ?? '')
+  }, [props.keymapKey])
+  return (
+    <ClickAwayListener
+      mouseEvent='onMouseDown'
+      touchEvent='onTouchStart'
+      onClickAway={() => props.onClickAway?.()}
+    >
+      <Popper open={props.open} anchorEl={props.anchor} placement='bottom-start'>
+        <Box height={100} width={200} border={1} p={1} bgcolor='white'>
+          <Autocomplete
+            value={value}
+            onChange={(event: any, newValue) => {
+              setValue(newValue ?? DefaultQmkKeycode);
+              props.onChange?.({
+                keymapkey: props.keymapKey,
+                keycode: newValue ?? DefaultQmkKeycode,
+              })
+            }}
+            inputValue={inputValue}
+            onInputChange={(event, newInputValue) => {
+              setInputValue(newInputValue)
+            }}
+            options={getTapKeycodes()}
+            isOptionEqualToValue={(option, value) => {
+              return option.value == value.value
+            }}
+            getOptionKey={(option) => option.key}
+            getOptionLabel={(option) => option.label}
+            renderInput={(params) => <TextField {...params} label='Tap' />}
+            renderOption={(props, option, state, ownerState) => (
+              <Box component='li' {...props}>
+                <div>{option.label}</div>
+                <div>{option.key}</div>
+              </Box>
+            )}
+          ></Autocomplete>
+        </Box>
+      </Popper>
+    </ClickAwayListener>
   )
 }
 
@@ -103,7 +159,7 @@ function KeyListKey(props: { keycode: QmkKeycode }) {
         event.dataTransfer.setData('QmkKeycode', JSON.stringify(props.keycode))
       }}
     >
-      {props.keycode.label ?? props.keycode.aliases?.[0] ?? props.keycode.key}
+      {props.keycode.label}
     </div>
   )
 }
@@ -182,12 +238,12 @@ function LayoutSelector(props: {
   onChange: (option: { [layout: number]: number }) => void;
 }) {
   return (
-    <FormControl variant="standard">
+    <FormControl variant='standard'>
       <Select
         value={props.option[0]}
-        label="layout"
+        label='layout'
         onChange={(event) =>
-          props.onChange({ 0: parseInt(event.target.value) })
+          props.onChange({ 0: event.target.value } as { [layout: number]: number })
         }
       >
         {props.layouts.labels[0]?.slice(1).map((label, index) => (
@@ -197,7 +253,7 @@ function LayoutSelector(props: {
         ))}
       </Select>
     </FormControl>
-  );
+  )
 }
 
 function LayerSelector(props: {layerCount:number, onChange:(layer:number)=>void})
@@ -205,14 +261,16 @@ function LayerSelector(props: {layerCount:number, onChange:(layer:number)=>void}
   return (
     <>
       {[...Array(props.layerCount)].map((_, idx) => {
-        return <Button
-          value={idx}
-          onClick={(event) => {
-            props.onChange(event.target.value);
-          }}
-        >
-          {idx}
-        </Button>;
+        return (
+          <Button
+            value={idx}
+            onClick={() => {
+              props.onChange(idx)
+            }}
+          >
+            {idx}
+          </Button>
+        )
       })}
     </>
   );
@@ -224,15 +282,45 @@ function KeymapLayer(props: {
   keymap: number[]
   onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void
 }) {
+  const [popupOpen, setpopupOpen] = useState(false)
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | undefined>(undefined)
+  const [focusedKey, setFocusedKey] = useState<KeymapKeyProperties | undefined>(undefined)
+  const [candidateKeycode, setCandidateKeycode]=useState<QmkKeycode>(DefaultQmkKeycode);
+
   return (
-    <div style={{ position: 'relative', marginTop: 50 }}>
-      {convertToKeymapKeys(props.keymapProps, props.layoutOption, props.keymap).map((p) =>
-        KeymapKey({
-          ...p,
-          onKeycodeChange: props.onKeycodeChange,
-        }),
-      )}
-    </div>
+    <>
+      <div style={{ position: 'relative', marginTop: 50 }}>
+        {convertToKeymapKeys(props.keymapProps, props.layoutOption, props.keymap).map((p) =>
+          KeymapKey({
+            ...p,
+            onKeycodeChange: props.onKeycodeChange,
+            onClick: (target) => {
+              setCandidateKeycode(p.keycode)
+              setFocusedKey(p)
+              setpopupOpen(true)
+              setAnchorEl(target)
+            },
+          }),
+        )}
+      </div>
+      <KeymapKeyPopUp
+        open={popupOpen}
+        anchor={anchorEl}
+        keymapKey={focusedKey}
+        onClickAway={() => {
+          if (popupOpen) {
+            setpopupOpen(false)
+            setAnchorEl(undefined)
+            if (focusedKey) {
+              props.onKeycodeChange?.(focusedKey!, candidateKeycode)
+            }
+          }
+        }}
+        onChange={(event) => {
+          setCandidateKeycode(event.keycode)
+        }}
+      ></KeymapKeyPopUp>
+    </>
   )
 }
 

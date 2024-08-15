@@ -12,12 +12,18 @@ export type QmkKeycode = {
   value: number
   group?: string
   key: string
-  label?: string
+  label: string
   aliases?: string[]
   hold?: number
   tap?: number
   modLabel?: string
   holdLabel?: string
+}
+
+export const DefaultQmkKeycode: QmkKeycode = {
+  value: 0,
+  key: 'KC_NO',
+  label: '',
 }
 
 function modString(mod: number) {
@@ -33,23 +39,24 @@ function modString(mod: number) {
 }
 
 export function convertIntToKeycode(
-  val: number,
+  value: number,
   customKeycodes?: { name: string; title: string; shortName: string }[],
 ): QmkKeycode {
   if (
     customKeycodes &&
-    val >= keycode_range.QK_KB.start &&
-    val - keycode_range.QK_KB.start < customKeycodes.length
+    value >= keycode_range.QK_KB.start &&
+    value - keycode_range.QK_KB.start < customKeycodes.length
   ) {
-    const customKey = customKeycodes[val - keycode_range.QK_KB.start]
-    return { value: val, key: customKey.name, label: customKey.shortName }
-  } else if (Object.keys(keycodes).includes(val.toString())) {
-    return { ...keycodes[val.toString()], value: val }
+    const customKey = customKeycodes[value - keycode_range.QK_KB.start]
+    return { value: value, key: customKey.name, label: customKey.shortName }
+  } else if (Object.keys(keycodes).includes(value.toString())) {
+    const keycode = keycodes[value.toString()];
+    return { ...keycode, value: value, label: keycode.label ?? keycode.aliases?.[0] ?? keycode.key }
   } else {
-    return match(val)
+    return match(value)
       .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
         return {
-          val: val,
+          value: val,
           key: 'mods',
           modLabel: modString((val >> 8) & 0x1f),
           label: convertIntToKeycode(val & 0xff).label,
@@ -59,7 +66,7 @@ export function convertIntToKeycode(
         P.number.between(keycode_range.QK_MOD_TAP.start, keycode_range.QK_MOD_TAP.end),
         (val) => {
           return {
-            val: val,
+            value: val,
             key: 'modTap',
             holdLabel: modString((val >> 8) & 0x1f),
             tap: val & 0xff,
@@ -71,7 +78,7 @@ export function convertIntToKeycode(
         P.number.between(keycode_range.QK_LAYER_TAP.start, keycode_range.QK_LAYER_TAP.end),
         (val) => {
           return {
-            val: val,
+            value: val,
             key: 'layerTap',
             hold: val >> 8,
             holdLabel: `Layer${(val >> 8) & 0xf}`,
@@ -83,11 +90,21 @@ export function convertIntToKeycode(
       .with(P._, () => {
         return {
           group: 'unknown',
-          key: `Any(${val.toString()})`,
-          label: `Any(${val.toString()})`,
-          val: val,
+          key: `Any(${value.toString()})`,
+          label: `Any(${value.toString()})`,
+          value: value,
         }
       })
       .exhaustive()
   }
+}
+
+export function getTapKeycodes(): QmkKeycode[] {
+  return Object.entries(keycodes).map((k) => {
+    return {
+      value: parseInt(k[0]),
+      ...k[1],
+      label: k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
+    }
+  })
 }
