@@ -41,12 +41,8 @@ function App() {
         menu: KeymapProperties;
       }
   >();
-  const [customValues, setCustomValues] = useState<{ [id: string]: number }>(
-    {}
-  );
-  const [customValueId, setCustomValueId] = useState<
-    [string, number, number, number?][]
-  >([]);
+  const [customValues, setCustomValues] = useState<{ [id: string]: number }>({});
+  const [customValueId, setCustomValueId] = useState<[string, number, number, number?][]>([]);
   const [connected, setConnected] = useState(false);
   const [kbName, setKbName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -60,9 +56,7 @@ function App() {
   const getCustomValues = async (_customValueId: typeof customValueId) => {
     const customValues: { [id: string]: number } = {};
     for (const element of _customValueId) {
-      customValues[element[0]] = await via.GetCustomValue(
-        element.slice(1) as number[]
-      );
+      customValues[element[0]] = await via.GetCustomValue(element.slice(1) as number[]);
     }
     setCustomValues(customValues);
     console.log(customValues);
@@ -81,7 +75,7 @@ function App() {
         setCustomValues({});
         setConnected(false);
         setKbName("");
-      }
+      },
     );
     const version = await via.GetProtocolVersion();
     await via.GetVialKeyboardId();
@@ -97,22 +91,21 @@ function App() {
     setCustomMenus(parsed?.menus ?? []);
     setKbName(parsed?.name ?? via.GetHidName());
 
-    const customValueId = (parsed.menus as MenuItemProperties[]).flatMap(
-      (top) =>
-        top.content.reduce((prev: [string, number, number, number?][], section) => {
-          section.content.forEach((content) => {
-            if ("type" in content) {
-              prev.push(content.content);
+    const customValueId = (parsed.menus as MenuItemProperties[]).flatMap((top) =>
+      top.content.reduce((prev: [string, number, number, number?][], section) => {
+        section.content.forEach((content) => {
+          if ("type" in content) {
+            prev.push(content.content);
+          } else {
+            if (Array.isArray(content.content)) {
+              content.content.forEach((c) => prev.push(c.content));
             } else {
-              if (Array.isArray(content.content)) {
-                content.content.forEach((c) => prev.push(c.content));
-              } else {
-                prev.push(content.content);
-              }
+              prev.push(content.content);
             }
-          });
-          return prev;
-        }, [])
+          }
+        });
+        return prev;
+      }, []),
     );
     setCustomValueId(customValueId);
     getCustomValues(customValueId);
@@ -152,10 +145,7 @@ function App() {
   };
 
   const onDownloadJsonClick = async () => {
-    downloadData(
-      JSON.stringify(customValues, null, 4),
-      `${kbName}_custon_config.json`
-    );
+    downloadData(JSON.stringify(customValues, null, 4), `${kbName}_custon_config.json`);
   };
 
   const onUploadJsonClick = async () => {
@@ -171,13 +161,10 @@ function App() {
           const result = e.target?.result as string;
           const parsedJson = Hjson.parse(result);
           console.log(parsedJson);
-          const loadedCustomValues = {...customValues, ...parsedJson};
+          const loadedCustomValues = { ...customValues, ...parsedJson };
           setCustomValues(loadedCustomValues);
           for (const element of customValueId) {
-            await via.SetCustomValue(
-              element.slice(1) as number[],
-              loadedCustomValues[element[0]]
-            );
+            await via.SetCustomValue(element.slice(1) as number[], loadedCustomValues[element[0]]);
           }
         } catch (error) {
           console.error("Error parsing JSON:", error);
@@ -297,10 +284,7 @@ function App() {
             </Grid>
           </Grid>
           <Divider />
-          <Link
-            href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial"
-            target="_blank"
-          >
+          <Link href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial" target="_blank">
             Usage
           </Link>
         </Grid>

@@ -96,11 +96,8 @@ type MenuSectionProperties = {
 };
 
 function ViaToggle(props: ToggleElement) {
-  const handleChange = (
-    _event: React.ChangeEvent<HTMLInputElement>,
-    checked: boolean
-  ) => {
-    props.onChange(checked ? props.options?.[1] ?? 1 : props.options?.[0] ?? 0);
+  const handleChange = (_event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+    props.onChange(checked ? (props.options?.[1] ?? 1) : (props.options?.[0] ?? 0));
   };
   return (
     <>
@@ -108,10 +105,7 @@ function ViaToggle(props: ToggleElement) {
         <h4>{props.label}</h4>
       </Grid>
       <Grid item xs={9}>
-        <Switch
-          onChange={handleChange}
-          checked={props.value == (props.options?.[1] ?? 1)}
-        ></Switch>
+        <Switch onChange={handleChange} checked={props.value == (props.options?.[1] ?? 1)}></Switch>
       </Grid>
     </>
   );
@@ -129,10 +123,7 @@ function ViaRange(props: RangeElement) {
       props.onChange(value);
     }
   };
-  const handleChangeCommitted = (
-    _event: SyntheticEvent | Event,
-    value: number | number[]
-  ) => {
+  const handleChangeCommitted = (_event: SyntheticEvent | Event, value: number | number[]) => {
     if (!Array.isArray(value)) {
       props.onChange(value);
     }
@@ -142,7 +133,7 @@ function ViaRange(props: RangeElement) {
     const min = props.options?.[0] ?? 0;
     const value = Math.min(
       max,
-      Math.max(min, Number(event.target.value === "" ? 0 : event.target.value))
+      Math.max(min, Number(event.target.value === "" ? 0 : event.target.value)),
     );
     props.onChange(value);
   };
@@ -173,9 +164,7 @@ function ViaRange(props: RangeElement) {
   );
 }
 
-function getDropDownLabels(
-  elem: DropdownElement | MultipleCheckboxElement
-): [string, number][] {
+function getDropDownLabels(elem: DropdownElement | MultipleCheckboxElement): [string, number][] {
   return elem.options.map((o, index) => {
     if (Array.isArray(o)) {
       return [o[0], o[1]];
@@ -187,10 +176,7 @@ function getDropDownLabels(
 
 function ViaDropDown(props: DropdownElement) {
   const handleChange = (event: SelectChangeEvent) => {
-    props.onChange(
-      getDropDownLabels(props).find((f) => f[0] === event.target.value)?.[1] ??
-        0
-    );
+    props.onChange(getDropDownLabels(props).find((f) => f[0] === event.target.value)?.[1] ?? 0);
   };
   return (
     <>
@@ -200,10 +186,7 @@ function ViaDropDown(props: DropdownElement) {
       <Grid item xs={9}>
         <FormControl fullWidth>
           <Select
-            value={
-              getDropDownLabels(props).find((f) => f[1] === props.value)?.[0] ??
-              ""
-            }
+            value={getDropDownLabels(props).find((f) => f[1] === props.value)?.[0] ?? ""}
             onChange={handleChange}
           >
             {getDropDownLabels(props).map((o) => {
@@ -275,18 +258,16 @@ function ViaMultipleCheckbox(props: MultipleCheckboxElement) {
     } = event;
     props.onChange(
       typeof value === "string"
-        ? labels.find((v) => v[0] === value)?.[1] ?? 0
+        ? (labels.find((v) => v[0] === value)?.[1] ?? 0)
         : (value as string[]).reduce(
             (p, c) => p ^ (1 << (labels.find((v) => v[0] === c)?.[1] ?? 0)),
-            0
-          )
+            0,
+          ),
     );
   };
 
   const valueToLabel = (value: string[]) => {
-    return value
-      .map((v) => labels.find((label) => v === label[0])?.[0])
-      .join(", ");
+    return value.map((v) => labels.find((label) => v === label[0])?.[0]).join(", ");
   };
 
   const valueToArray = (value: number): string[] => {
@@ -296,9 +277,7 @@ function ViaMultipleCheckbox(props: MultipleCheckboxElement) {
         bitsArray.push(i);
       }
     }
-    const arr = bitsArray.map(
-      (b) => labels.find((label) => label[1] == b)?.[0] ?? ""
-    );
+    const arr = bitsArray.map((b) => labels.find((label) => label[1] == b)?.[0] ?? "");
     return arr;
   };
 
@@ -330,10 +309,7 @@ function ViaMultipleCheckbox(props: MultipleCheckboxElement) {
   );
 }
 
-function MenuElement(
-  props: MenuSectionProperties,
-  elem: MenuElementProperties
-) {
+function MenuElement(props: MenuSectionProperties, elem: MenuElementProperties) {
   if ("type" in elem) {
     switch (elem.type) {
       case "toggle":
@@ -402,10 +378,7 @@ function ViaMenuItem(props: MenuSectionProperties) {
       <Grid item xs={12}></Grid>
       {props.content.flatMap((elem) => {
         if ("showIf" in elem) {
-          const show = evaluate(
-            props.customValues,
-            elem.showIf.replace(/({|})/g, "")
-          );
+          const show = evaluate(props.customValues, elem.showIf.replace(/({|})/g, ""));
           if (show) {
             return "label" in elem
               ? MenuElement(props, elem)
@@ -421,4 +394,3 @@ function ViaMenuItem(props: MenuSectionProperties) {
 
 export { ViaMenuItem };
 export type { MenuItemProperties, MenuSectionProperties };
-

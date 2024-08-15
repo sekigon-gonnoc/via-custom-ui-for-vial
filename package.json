@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "download": "node src/components/keycodes/downloadkeycode.js"
+    "download": "node src/components/keycodes/downloadkeycode.js",
+    "format": "prettier --write src/**/*.{js,ts,tsx}"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",

@@ -2,7 +2,7 @@ import { WebUsbComInterface } from "./webUsbComInterface";
 
 class WebRawHID implements WebUsbComInterface {
   private receiveCallback: ((msg: HIDInputReportEvent) => void) | null = null;
-  private closeCallback: (() => void) = () => { };
+  private closeCallback: () => void = () => {};
 
   private port: HIDDevice | null = null;
   private reportId: number = 0;
@@ -32,7 +32,7 @@ class WebRawHID implements WebUsbComInterface {
 
   async open(onConnect: () => void | null, param: HIDDeviceFilter[]) {
     const request = await navigator.hid.requestDevice({
-      filters: param
+      filters: param,
     });
     console.log(request);
     this.port = request[0];
@@ -48,7 +48,9 @@ class WebRawHID implements WebUsbComInterface {
       return Promise.reject(e);
     }
 
-    this.reportId = this.port.collections.find(info => info.outputReports?.[0]?.reportId ?? 0 > 0)?.outputReports?.[0]?.reportId ?? 0;
+    this.reportId =
+      this.port.collections.find((info) => info.outputReports?.[0]?.reportId ?? 0 > 0)
+        ?.outputReports?.[0]?.reportId ?? 0;
     console.log(`Report Id: ${this.reportId}`);
 
     if (onConnect) {
@@ -65,7 +67,7 @@ class WebRawHID implements WebUsbComInterface {
   }
 
   async writeString(msg: string) {
-    const encoder = new TextEncoder()
+    const encoder = new TextEncoder();
     this.port?.sendReport(this.reportId, encoder.encode(msg));
   }
 
@@ -73,13 +75,12 @@ class WebRawHID implements WebUsbComInterface {
     console.log(
       `send: ${Array.from(msg)
         .map((v) => v.toString(16))
-        .join(" ")}`
+        .join(" ")}`,
     );
     try {
       await this.port?.sendReport(this.reportId, msg);
-    }
-    catch (e) {
-      console.error(e)
+    } catch (e) {
+      console.error(e);
     }
   }
 

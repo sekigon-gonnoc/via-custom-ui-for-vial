@@ -8,6 +8,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <>
     <CssBaseline />
     <App />
-  </>
+  </>,
   //</React.StrictMode>
 );
