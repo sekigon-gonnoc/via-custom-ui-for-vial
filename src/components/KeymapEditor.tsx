@@ -2,7 +2,7 @@ import { Autocomplete, Box, Button, ClickAwayListener, FormControl, MenuItem, Po
 import { match, P } from "ts-pattern";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { useEffect, useState } from "react";
-import { convertIntToKeycode, DefaultQmkKeycode, getTapKeycodes, QmkKeycode } from "./keycodes/keycodeConverter";
+import { DefaultQmkKeycode,  QmkKeycode, KeycodeConverter } from "./keycodes/keycodeConverter";
 
 export interface KeymapProperties {
   via: ViaKeyboard;
@@ -92,6 +92,7 @@ export function KeymapKey(props: KeymapKeyProperties) {
 
 function KeymapKeyPopUp(props: {
   open: boolean
+  keycodeconverter: KeycodeConverter
   anchor?: HTMLElement
   keymapKey?: KeymapKeyProperties
   onClickAway?: () => void
@@ -114,7 +115,7 @@ function KeymapKeyPopUp(props: {
           <Autocomplete
             value={value}
             onChange={(event: any, newValue) => {
-              setValue(newValue ?? DefaultQmkKeycode);
+              setValue(newValue ?? DefaultQmkKeycode)
               props.onChange?.({
                 keymapkey: props.keymapKey,
                 keycode: newValue ?? DefaultQmkKeycode,
@@ -124,7 +125,7 @@ function KeymapKeyPopUp(props: {
             onInputChange={(event, newInputValue) => {
               setInputValue(newInputValue)
             }}
-            options={getTapKeycodes()}
+            options={props.keycodeconverter.getTapKeycodes()}
             isOptionEqualToValue={(option, value) => {
               return option.value == value.value
             }}
@@ -167,7 +168,8 @@ function KeyListKey(props: { keycode: QmkKeycode }) {
 function convertToKeymapKeys(
   props: KeymapProperties,
   layoutOptions: { [layout: number]: number },
-  keymap: number[]
+  keymap: number[],
+  keycodeconverter: KeycodeConverter
 ): KeymapKeyProperties[] {
   let current = {
     x: 0,
@@ -201,11 +203,10 @@ function convertToKeymapKeys(
               ...current,
               matrix: keyPos,
               layout: [],
-              keycode: convertIntToKeycode(
-                keymap[keyPos[1] + keyPos[0] * props.matrix.cols],
-                props.customKeycodes
+              keycode: keycodeconverter.convertIntToKeycode(
+                keymap[keyPos[1] + keyPos[0] * props.matrix.cols]
               ),
-            });
+            })
             current.x += current.w;
             current.w = 1;
             current.h = 1;
@@ -280,6 +281,7 @@ function KeymapLayer(props: {
   keymapProps: KeymapProperties
   layoutOption: { [layout: number]: number }
   keymap: number[]
+  keycodeconverter: KeycodeConverter
   onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void
 }) {
   const [popupOpen, setpopupOpen] = useState(false)
@@ -290,7 +292,12 @@ function KeymapLayer(props: {
   return (
     <>
       <div style={{ position: 'relative', marginTop: 50 }}>
-        {convertToKeymapKeys(props.keymapProps, props.layoutOption, props.keymap).map((p) =>
+        {convertToKeymapKeys(
+          props.keymapProps,
+          props.layoutOption,
+          props.keymap,
+          props.keycodeconverter,
+        ).map((p) =>
           KeymapKey({
             ...p,
             onKeycodeChange: props.onKeycodeChange,
@@ -305,6 +312,7 @@ function KeymapLayer(props: {
       </div>
       <KeymapKeyPopUp
         open={popupOpen}
+        keycodeconverter={props.keycodeconverter}
         anchor={anchorEl}
         keymapKey={focusedKey}
         onClickAway={() => {
@@ -384,13 +392,16 @@ export function KeymapEditor(props: KeymapProperties) {
             keymapProps={props}
             layoutOption={layoutOption}
             keymap={keymap[layer]}
+            keycodeconverter={new KeycodeConverter(props.customKeycodes)}
             onKeycodeChange={(target, newKeycode) => {
               const offset = props.matrix.cols * target.matrix[0] + target.matrix[1]
               const newKeymap = { ...keymap }
               newKeymap[layer][offset] = newKeycode.value
               setKeymap(newKeymap)
               setLayer(layer)
-              console.log(`update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`)
+              console.log(
+                `update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`,
+              )
             }}
           ></KeymapLayer>
         ) : (
@@ -398,7 +409,9 @@ export function KeymapEditor(props: KeymapProperties) {
         )}
       </div>
       <div style={{ marginTop: 400 }}>
-        <KeyListKey keycode={convertIntToKeycode(4)}></KeyListKey>
+        <KeyListKey
+          keycode={new KeycodeConverter(props.customKeycodes).convertIntToKeycode(4)}
+        ></KeyListKey>
       </div>
     </>
   )

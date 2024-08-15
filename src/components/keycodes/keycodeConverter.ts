@@ -38,7 +38,7 @@ function modString(mod: number) {
   return mod & 0x10 ? `${activeMod.join('+')}*` : `*${activeMod.join('+')}`
 }
 
-export function convertIntToKeycode(
+function convertIntToKeycode(
   value: number,
   customKeycodes?: { name: string; title: string; shortName: string }[],
 ): QmkKeycode {
@@ -99,12 +99,33 @@ export function convertIntToKeycode(
   }
 }
 
-export function getTapKeycodes(): QmkKeycode[] {
-  return Object.entries(keycodes).map((k) => {
-    return {
-      value: parseInt(k[0]),
-      ...k[1],
-      label: k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
-    }
-  })
+export class KeycodeConverter {
+  private customKeycodes
+  constructor(customKeycodes?: { name: string; title: string; shortName: string }[]) {
+    this.customKeycodes = customKeycodes
+  }
+
+  public getTapKeycodes(): QmkKeycode[] {
+    return Object.entries(keycodes).map((k) => {
+      const value = parseInt(k[0])
+      if (
+        this.customKeycodes &&
+        value >= keycode_range.QK_KB.start &&
+        value - keycode_range.QK_KB.start < this.customKeycodes.length
+      ) {
+        const customKey = this.customKeycodes[value - keycode_range.QK_KB.start]
+        return { value: value, key: customKey.name, label: customKey.shortName }
+      } else {
+        return {
+          value: parseInt(k[0]),
+          ...k[1],
+          label: k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
+        }
+      }
+    })
+  }
+
+  public convertIntToKeycode(value: number): QmkKeycode {
+    return convertIntToKeycode(value, this.customKeycodes)
+  }
 }
