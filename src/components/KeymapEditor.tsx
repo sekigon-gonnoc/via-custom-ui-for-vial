@@ -113,12 +113,14 @@ function KeymapKeyPopUp(props: {
   const [modsValue, setModsValue] = useState<ModifierBits>(
     props.keycodeconverter.getModifier(props.keymapKey?.keycode),
   )
+  const [keycodeValue, setKeycodeValue] = useState<string>("")
   useEffect(() => {
     setTapValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode))
     setTapInputValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode).label)
     setHoldValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode))
     setHoldInputValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode).label)
     setModsValue(props.keycodeconverter.getModifier(props.keymapKey?.keycode))
+    setKeycodeValue((props.keymapKey?.keycode.value ?? 0).toString())
   }, [props.keymapKey])
   return (
     <ClickAwayListener
@@ -132,14 +134,16 @@ function KeymapKeyPopUp(props: {
             value={tapValue}
             onChange={(event: any, newValue) => {
               setTapValue(newValue ?? DefaultQmkKeycode)
+              const newKeycode =
+                props.keycodeconverter.combineKeycodes(
+                  newValue ?? DefaultQmkKeycode,
+                  holdValue,
+                  modsValue,
+                ) ?? DefaultQmkKeycode
+              setKeycodeValue(newKeycode.value.toString())
               props.onChange?.({
                 keymapkey: props.keymapKey,
-                keycode:
-                  props.keycodeconverter.combineKeycodes(
-                    newValue ?? DefaultQmkKeycode,
-                    holdValue,
-                    modsValue,
-                  ) ?? DefaultQmkKeycode,
+                keycode: newKeycode,
               })
             }}
             inputValue={tapInputValue}
@@ -165,14 +169,16 @@ function KeymapKeyPopUp(props: {
             value={holdValue}
             onChange={(event: any, newValue) => {
               setHoldValue(newValue ?? DefaultQmkKeycode)
+              const newKeycode =
+                props.keycodeconverter.combineKeycodes(
+                  tapValue,
+                  newValue ?? DefaultQmkKeycode,
+                  modsValue,
+                ) ?? DefaultQmkKeycode
+              setKeycodeValue(newKeycode.value.toString())
               props.onChange?.({
                 keymapkey: props.keymapKey,
-                keycode:
-                  props.keycodeconverter.combineKeycodes(
-                    tapValue,
-                    newValue ?? DefaultQmkKeycode,
-                    modsValue,
-                  ) ?? DefaultQmkKeycode,
+                keycode: newKeycode,
               })
             }}
             inputValue={holdInputValue}
@@ -209,15 +215,19 @@ function KeymapKeyPopUp(props: {
                 control={
                   <Checkbox
                     checked={(modsValue & Object.values(k)[0]) !== 0}
-                    onChange={() => {
-                      const newMods = modsValue | Object.values(k)[0]
+                    onChange={(event) => {
+                      const newMods = event.target.checked
+                        ? modsValue | Object.values(k)[0]
+                        : modsValue & ~Object.values(k)[0]
                       console.log(`new mods ${newMods}`)
                       setModsValue(newMods)
+                      const newKeycode =
+                        props.keycodeconverter.combineKeycodes(tapValue, holdValue, newMods) ??
+                        DefaultQmkKeycode
+                      setKeycodeValue(newKeycode.value.toString())
                       props.onChange?.({
                         keymapkey: props.keymapKey,
-                        keycode:
-                          props.keycodeconverter.combineKeycodes(tapValue, holdValue, newMods) ??
-                          DefaultQmkKeycode,
+                        keycode: newKeycode,
                       })
                     }}
                     size='small'
@@ -228,6 +238,27 @@ function KeymapKeyPopUp(props: {
               ></FormControlLabel>
             ))}
           </FormGroup>
+          <TextField
+            label='Keycode(decimal)'
+            variant='outlined'
+            value={keycodeValue.toString()}
+            onChange={(event) => {
+              setKeycodeValue(event.target.value)
+              const keycodeValue = parseInt(event.target.value)
+              if (0 <= keycodeValue && keycodeValue <= 0xffff) {
+                const keycode = props.keycodeconverter.convertIntToKeycode(keycodeValue)
+                setTapValue(props.keycodeconverter.getTapKeycode(keycode))
+                setTapInputValue(props.keycodeconverter.getTapKeycode(keycode).label)
+                setHoldValue(props.keycodeconverter.getHoldKeycode(keycode))
+                setHoldInputValue(props.keycodeconverter.getHoldKeycode(keycode).label)
+                setModsValue(props.keycodeconverter.getModifier(keycode))
+                props.onChange?.({
+                  keymapkey: props.keymapKey,
+                  keycode: props.keycodeconverter.convertIntToKeycode(keycodeValue),
+                })
+              }
+            }}
+          ></TextField>
         </Box>
       </Popper>
     </ClickAwayListener>

@@ -37,9 +37,9 @@ export const DefaultQmkKeycode: QmkKeycode = {
 }
 
 const ModTapKeycodeBase: QmkKeycode = {
-  label: 'Mods',
+  label: 'ModTap',
   value: keycode_range.QK_MOD_TAP.start,
-  key: 'MOD_TAP',
+  key: 'MOD_TAP(kc)',
 }
 
 function modString(mod: number) {
@@ -166,7 +166,7 @@ export class KeycodeConverter {
     if (keycode === undefined) {
       return DefaultQmkKeycode
     } else if (
-      keycode_range.QK_MOD_TAP.start <= keycode.value &&
+      keycode_range.QK_MODS.start <= keycode.value &&
       keycode.value <= keycode_range.QK_LAYER_TAP.end
     ) {
       return this.convertIntToKeycode(keycode.value & 0xff)
