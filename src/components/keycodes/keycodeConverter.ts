@@ -26,6 +26,12 @@ export const DefaultQmkKeycode: QmkKeycode = {
   label: '',
 }
 
+const ModTapKeycodeBase: QmkKeycode = {
+  label: 'Mods',
+  value: keycode_range.QK_MOD_TAP.start,
+  key: 'MOD_TAP',
+}
+
 function modString(mod: number) {
   const MOD = ['C', 'S', 'A', 'G']
   const activeMod = []
@@ -101,11 +107,16 @@ function convertIntToKeycode(
 
 export class KeycodeConverter {
   private customKeycodes
-  constructor(customKeycodes?: { name: string; title: string; shortName: string }[]) {
+  private layer: number
+  constructor(
+    layer: number = 16,
+    customKeycodes?: { name: string; title: string; shortName: string }[],
+  ) {
     this.customKeycodes = customKeycodes
+    this.layer = layer
   }
 
-  public getTapKeycodes(): QmkKeycode[] {
+  public getTapKeycodeList(): QmkKeycode[] {
     return Object.entries(keycodes).map((k) => {
       const value = parseInt(k[0])
       if (
@@ -123,6 +134,68 @@ export class KeycodeConverter {
         }
       }
     })
+  }
+
+  public getHoldKeycodeList(): QmkKeycode[] {
+    const qmkeycodes: QmkKeycode[] = []
+    qmkeycodes.push(ModTapKeycodeBase)
+    qmkeycodes.push(
+      ...[...Array(this.layer)].map((_, layer) => {
+        return {
+          label: `Layer Tap ${layer}`,
+          value: keycode_range.QK_LAYER_TAP.start + (layer << 8),
+          key: `LT(${layer}, kc)`,
+        }
+      }),
+    )
+
+    return qmkeycodes
+  }
+
+  public getTapKeycode(keycode?: QmkKeycode): QmkKeycode {
+    if (keycode === undefined) {
+      return DefaultQmkKeycode
+    } else if (
+      keycode_range.QK_MOD_TAP.start <= keycode.value &&
+      keycode.value <= keycode_range.QK_LAYER_TAP.end
+    ) {
+      return this.convertIntToKeycode(keycode.value & 0xff)
+    } else {
+      return keycode
+    }
+  }
+
+  public getHoldKeycode(keycode?: QmkKeycode): QmkKeycode {
+    if (keycode === undefined) {
+      return DefaultQmkKeycode
+    } else if (
+      keycode_range.QK_MOD_TAP.start <= keycode.value &&
+      keycode.value <= keycode_range.QK_MOD_TAP.end
+    ) {
+      return ModTapKeycodeBase
+    } else if (
+      keycode_range.QK_LAYER_TAP.start <= keycode.value &&
+      keycode.value <= keycode_range.QK_LAYER_TAP.end
+    ) {
+      return (
+        this.getHoldKeycodeList().find(
+          (value) => (value.value & 0xff00) === (keycode.value & 0xff00),
+        ) ?? DefaultQmkKeycode
+      )
+    } else {
+      return DefaultQmkKeycode
+    }
+  }
+
+  public combineKeycodes(tap: QmkKeycode, hold: QmkKeycode): QmkKeycode | null {
+    if (
+      keycode_range.QK_MOD_TAP.start <= hold.value &&
+      hold.value <= keycode_range.QK_LAYER_TAP.end
+    ) {
+      return this.convertIntToKeycode((tap.value & 0x00ff) | (hold.value & 0xff00))
+    } else {
+      return tap
+    }
   }
 
   public convertIntToKeycode(value: number): QmkKeycode {

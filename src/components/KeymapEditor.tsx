@@ -98,11 +98,23 @@ function KeymapKeyPopUp(props: {
   onClickAway?: () => void
   onChange?: (event: { keymapkey?: KeymapKeyProperties; keycode: QmkKeycode }) => void
 }) {
-  const [value, setValue] = useState<QmkKeycode>(props.keymapKey?.keycode ?? DefaultQmkKeycode)
-  const [inputValue, setInputValue] = useState<string>(props.keymapKey?.keycode.label ?? '')
+  const [tapValue, setTapValue] = useState<QmkKeycode>(
+    props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode),
+  )
+  const [tapInputValue, setTapInputValue] = useState<string>(
+    props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode).label,
+  )
+  const [holdValue, setHoldValue] = useState<QmkKeycode>(
+    props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode),
+  )
+  const [holdInputValue, setHoldInputValue] = useState<string>(
+    props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode).label,
+  )
   useEffect(() => {
-    setValue(props.keymapKey?.keycode ?? DefaultQmkKeycode)
-    setInputValue(props.keymapKey?.keycode.label ?? '')
+    setTapValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode))
+    setTapInputValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode).label)
+    setHoldValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode))
+    setHoldInputValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode).label)
   }, [props.keymapKey])
   return (
     <ClickAwayListener
@@ -113,25 +125,59 @@ function KeymapKeyPopUp(props: {
       <Popper open={props.open} anchorEl={props.anchor} placement='bottom-start'>
         <Box height={100} width={200} border={1} p={1} bgcolor='white'>
           <Autocomplete
-            value={value}
+            value={tapValue}
             onChange={(event: any, newValue) => {
-              setValue(newValue ?? DefaultQmkKeycode)
+              setTapValue(newValue ?? DefaultQmkKeycode)
               props.onChange?.({
                 keymapkey: props.keymapKey,
-                keycode: newValue ?? DefaultQmkKeycode,
+                keycode:
+                  props.keycodeconverter.combineKeycodes(
+                    newValue ?? DefaultQmkKeycode,
+                    holdValue,
+                  ) ?? DefaultQmkKeycode,
               })
             }}
-            inputValue={inputValue}
+            inputValue={tapInputValue}
             onInputChange={(event, newInputValue) => {
-              setInputValue(newInputValue)
+              setTapInputValue(newInputValue)
             }}
-            options={props.keycodeconverter.getTapKeycodes()}
+            options={props.keycodeconverter.getTapKeycodeList()}
             isOptionEqualToValue={(option, value) => {
               return option.value == value.value
             }}
             getOptionKey={(option) => option.key}
             getOptionLabel={(option) => option.label}
             renderInput={(params) => <TextField {...params} label='Tap' />}
+            renderOption={(props, option, state, ownerState) => (
+              <Box component='li' {...props}>
+                <div>{option.label}</div>
+                <div>{option.key}</div>
+              </Box>
+            )}
+          ></Autocomplete>
+
+          <Autocomplete
+            value={holdValue}
+            onChange={(event: any, newValue) => {
+              setHoldValue(newValue ?? DefaultQmkKeycode)
+              props.onChange?.({
+                keymapkey: props.keymapKey,
+                keycode:
+                  props.keycodeconverter.combineKeycodes(tapValue, newValue ?? DefaultQmkKeycode) ??
+                  DefaultQmkKeycode,
+              })
+            }}
+            inputValue={holdInputValue}
+            onInputChange={(event, newInputValue) => {
+              setHoldInputValue(newInputValue)
+            }}
+            options={props.keycodeconverter.getHoldKeycodeList()}
+            isOptionEqualToValue={(option, value) => {
+              return option.value == value.value
+            }}
+            getOptionKey={(option) => option.key}
+            getOptionLabel={(option) => option.label}
+            renderInput={(params) => <TextField {...params} label='Hold' />}
             renderOption={(props, option, state, ownerState) => (
               <Box component='li' {...props}>
                 <div>{option.label}</div>
@@ -392,7 +438,7 @@ export function KeymapEditor(props: KeymapProperties) {
             keymapProps={props}
             layoutOption={layoutOption}
             keymap={keymap[layer]}
-            keycodeconverter={new KeycodeConverter(props.customKeycodes)}
+            keycodeconverter={new KeycodeConverter(layerCount, props.customKeycodes)}
             onKeycodeChange={(target, newKeycode) => {
               const offset = props.matrix.cols * target.matrix[0] + target.matrix[1]
               const newKeymap = { ...keymap }
@@ -410,7 +456,7 @@ export function KeymapEditor(props: KeymapProperties) {
       </div>
       <div style={{ marginTop: 400 }}>
         <KeyListKey
-          keycode={new KeycodeConverter(props.customKeycodes).convertIntToKeycode(4)}
+          keycode={new KeycodeConverter(layerCount, props.customKeycodes).convertIntToKeycode(4)}
         ></KeyListKey>
       </div>
     </>
