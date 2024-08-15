@@ -448,6 +448,7 @@ export function KeymapEditor(props: KeymapProperties) {
   const [layerCount, setLayerCount] = useState(1);
   const [layer, setLayer] = useState(0);
   const [keymap, setKeymap] = useState<{ [layer: number]: number[] }>({});
+  const [dynamicEntryCount, setDynamicEntryCount] = useState({ tapdance: 0, combo: 0, override: 0 })
 
   useEffect(() => {
     navigator.locks.request("load-layout", async () => {
@@ -462,15 +463,16 @@ export function KeymapEditor(props: KeymapProperties) {
           col: props.matrix.cols,
         });
         setKeymap({ ...keymap, 0: layerKeys });
-        console.log("load keymap 0");
-        console.log(layerKeys);
       }
+      const dynamicEntryCount = await props.via.GetDynamicEntryCount()
+      setDynamicEntryCount(dynamicEntryCount)
+      console.log(dynamicEntryCount)
     });
   }, [props.layouts]);
 
   const keycodeConverter = useMemo(() => {
-    return new KeycodeConverter(layerCount, props.customKeycodes)
-  }, [layerCount, props.customKeycodes])
+    return new KeycodeConverter(layerCount, props.customKeycodes, dynamicEntryCount.tapdance)
+  }, [layerCount, props.customKeycodes, dynamicEntryCount])
 
   return (
     <>
@@ -526,7 +528,11 @@ export function KeymapEditor(props: KeymapProperties) {
         tab={[
           { label: 'Basic', keygroup: ['basic', 'modifiers'] },
           { label: 'Mouse', keygroup: ['mouse'] },
-          { label: 'User', keygroup: ['custom', 'kb', 'user'] },
+          { label: 'User/Wireless', keygroup: ['custom', 'kb', 'user'] },
+          { label: 'Media', keygroup: ['media'] },
+          { label: 'Quantum', keygroup: ['quantum'] },
+          { label: 'Macro', keygroup: ['macro'] },
+          { label: 'TapDance', keygroup: ['tapdance'] },
         ]}
       ></KeycodeCatalog>
     </>

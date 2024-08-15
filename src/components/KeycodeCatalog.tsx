@@ -1,48 +1,64 @@
-import { Box, Grid, Tab, Tabs } from '@mui/material'
+import { Box, Grid, Tab, Tabs, Tooltip } from '@mui/material'
 import { KeycodeConverter, QmkKeycode } from './keycodes/keycodeConverter'
 import { useState } from 'react'
 
 const WIDTH_1U = 50
 function KeyListKey(props: { keycode: QmkKeycode }) {
     const [isDragging, setIsDragging] = useState(false)
+    const [showToolTip, setShowToolTip]=useState(false);
   return (
-    <Box
-      style={{
-        width: WIDTH_1U - 3,
-        height: WIDTH_1U - 3,
-        outline: 'solid',
-        outlineWidth: '1px',
-        outlineColor: 'black',
+    <Tooltip
+      open={showToolTip}
+      onOpen={() => {
+        setShowToolTip(true)
       }}
-      draggable={true}
-      onDragStart={(event) => {
-        event.dataTransfer.setData('QmkKeycode', JSON.stringify(props.keycode))
-        setIsDragging(true)
+      onClose={() => {
+        setShowToolTip(false)
       }}
-      onDragEnd={(event) => {
-        setIsDragging(false)
-      }}
-      onMouseMove={(event) => {
-        if (!isDragging) return
-        const { clientX, clientY } = event
-        const scrollArea = 50
-        const scrollSpeed = 10
-
-        if (clientX < scrollArea) {
-          window.scrollBy(-scrollSpeed, 0)
-        } else if (window.innerWidth - clientX < scrollArea) {
-          window.scrollBy(scrollSpeed, 0)
-        }
-
-        if (clientY < scrollArea) {
-          window.scrollBy(0, -scrollSpeed)
-        } else if (window.innerHeight - clientY < scrollArea) {
-          window.scrollBy(0, scrollSpeed)
-        }
-      }}
+      title={`${props.keycode.key}(${props.keycode.value.toString()})`}
+      placement='top'
     >
-      {props.keycode.label}
-    </Box>
+      <Box
+        style={{
+          width: WIDTH_1U - 3,
+          height: WIDTH_1U - 3,
+          outline: 'solid',
+          outlineWidth: '1px',
+          outlineColor: 'black',
+        }}
+        draggable={true}
+        onDragStart={(event) => {
+          event.dataTransfer.setData('QmkKeycode', JSON.stringify(props.keycode))
+          setIsDragging(true)
+        }}
+        onDragEnd={(event) => {
+          setIsDragging(false)
+        }}
+        onMouseMove={(event) => {
+          if (!isDragging) return
+          const { clientX, clientY } = event
+          const scrollArea = 50
+          const scrollSpeed = 10
+
+          if (clientX < scrollArea) {
+            window.scrollBy(-scrollSpeed, 0)
+          } else if (window.innerWidth - clientX < scrollArea) {
+            window.scrollBy(scrollSpeed, 0)
+          }
+
+          if (clientY < scrollArea) {
+            window.scrollBy(0, -scrollSpeed)
+          } else if (window.innerHeight - clientY < scrollArea) {
+            window.scrollBy(0, scrollSpeed)
+          }
+        }}
+        onMouseLeave={(event) => {
+          setShowToolTip(false)
+        }}
+      >
+        {props.keycode.label}
+      </Box>
+    </Tooltip>
   )
 }
 

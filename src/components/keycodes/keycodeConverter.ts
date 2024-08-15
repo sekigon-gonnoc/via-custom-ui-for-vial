@@ -66,7 +66,7 @@ function convertIntToKeycode(
     const customKey = customKeycodes[value - keycode_range.QK_KB.start]
     return { value: value, key: customKey.name, label: customKey.shortName }
   } else if (Object.keys(keycodes).includes(value.toString())) {
-    const keycode = keycodes[value.toString()];
+    const keycode = keycodes[value.toString()]
     return { ...keycode, value: value, label: keycode.label ?? keycode.aliases?.[0] ?? keycode.key }
   } else {
     return match(value)
@@ -123,6 +123,7 @@ export class KeycodeConverter {
   constructor(
     layer: number = 16,
     customKeycodes?: { name: string; title: string; shortName: string }[],
+    tapDanceCount: number = 0,
   ) {
     this.customKeycodes = customKeycodes
     this.layer = layer
@@ -144,6 +145,19 @@ export class KeycodeConverter {
         }
       }
     })
+
+    if (tapDanceCount > 0) {
+      this.tapKeycodeList.push(
+        ...[...Array(tapDanceCount)].map((_, idx) => {
+          return {
+            group: 'tapdance',
+            value: keycode_range.QK_TAP_DANCE.start + idx,
+            key: `TAP_DANCE_${idx}`,
+            label: `TD${idx}`,
+          }
+        }),
+      )
+    }
 
     this.holdKeycodeList.push(DefaultQmkKeycode, ModTapKeycodeBase)
     this.holdKeycodeList.push(

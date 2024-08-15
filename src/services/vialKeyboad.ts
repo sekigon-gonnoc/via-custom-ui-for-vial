@@ -54,198 +54,239 @@ enum vial_command_id {
 const VIAL_PAGE_SIZE = 32;
 
 class VialKeyboard {
-    private hid: WebRawHID;
-    private receive_flag: boolean = false;
-    private received: Uint8Array = new Uint8Array();
-    constructor() {
-        this.hid = new WebRawHID();
+  private hid: WebRawHID
+  private receive_flag: boolean = false
+  private received: Uint8Array = new Uint8Array()
+  constructor() {
+    this.hid = new WebRawHID()
+  }
+
+  private sleep(ms: number) {
+    return new Promise((resolve: any) => setTimeout(resolve, ms))
+  }
+
+  private receiveCallback(msg: Uint8Array) {
+    this.receive_flag = true
+    this.received = msg
+  }
+
+  private async readResponse(timeout: number = 100): Promise<Uint8Array> {
+    let cnt = 0
+    while (!this.receive_flag && cnt < timeout) {
+      await this.sleep(1)
+      cnt += 1
     }
 
-    private sleep(ms: number) {
-        return new Promise((resolve: any) => setTimeout(resolve, ms));
+    if (this.receive_flag) {
+      this.receive_flag = false
+      return Uint8Array.from(this.received)
+    } else {
+      throw new Error('via command timeout')
     }
+  }
 
-    private receiveCallback(msg: Uint8Array) {
-        this.receive_flag = true;
-        this.received = msg;
+  async Open(openCallback: () => void = () => {}, closeCallback: () => void = () => {}) {
+    if (!this.hid.connected) {
+      await this.hid.open(openCallback, [{ usagePage: 0xff60, usage: 0x61 }])
+      this.hid.setReceiveCallback(this.receiveCallback.bind(this))
+      this.hid.setCloseCallback(closeCallback)
     }
+  }
 
-    private async readResponse(timeout: number = 100): Promise<Uint8Array> {
-        let cnt = 0;
-        while (!this.receive_flag && cnt < timeout) {
-            await this.sleep(1);
-            cnt += 1;
-        }
+  async Close() {
+    await this.hid.close()
+  }
 
-        if (this.receive_flag) {
-            this.receive_flag = false;
-            return Uint8Array.from(this.received);
+  Connected() {
+    return this.hid.connected
+  }
+
+  async Command(msg: ArrayLike<number>) {
+    return navigator.locks.request('vial-keyboard', async () => {
+      if (!this.hid.connected) await this.Open()
+      const send = Uint8Array.from(msg)
+      try {
+        await this.hid.write(Uint8Array.from(send))
+      } catch (error) {
+        await this.hid.close()
+        throw error
+      }
+      const res = await this.readResponse(500)
+      console.log(`received: ${res}`)
+
+      return res
+    })
+  }
+
+  async GetProtocolVersion() {
+    const res = await this.Command([via_command_id.id_get_protocol_version])
+    return res ? res[2] | (res[3] << 8) : 0
+  }
+
+  async GetLayoutOption() {
+    const res = await this.Command([
+      via_command_id.id_get_keyboard_value,
+      via_keyboard_value_id.id_layout_options,
+    ])
+    return res ? res[5] | (res[4] << 8) | (res[3] << 16) | (res[2] << 24) : 0
+  }
+
+  async GetVialKeyboardId() {
+    const res = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_keyboard_id])
+    return res?.slice(0, 4)
+  }
+
+  async GetVialCompressedDefinition(): Promise<Uint8Array> {
+    const res_size = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_size])
+    const size = res_size[0] + (res_size[1] << 8) + (res_size[2] << 16) + (res_size[3] << 24)
+
+    const page_len = Math.floor((size + VIAL_PAGE_SIZE - 1) / VIAL_PAGE_SIZE)
+    const vial_def: number[][] = []
+
+    await navigator.locks.request('vial-keyboard', async () => {
+      this.hid.setReceiveCallback((res) => {
+        console.log(res)
+        vial_def.push(Array.from(res))
+      })
+
+      for (let page = 0; page < page_len; page++) {
+        await this.hid.write(
+          Uint8Array.from([via_command_id.id_vial, vial_command_id.vial_get_def, page]),
+        )
+      }
+
+      const timeout_max = 3000
+      let timeout = timeout_max
+      let current_len = vial_def.length
+      while (vial_def.length < page_len) {
+        await this.sleep(50)
+        if (current_len != vial_def.length) {
+          current_len = vial_def.length
+          timeout = timeout_max
         } else {
-            throw new Error("via command timeout");
+          timeout -= 50
+          if (timeout < 0) {
+            break
+          }
         }
-    }
+      }
 
-    async Open(
-        openCallback: () => void = () => { },
-        closeCallback: () => void = () => { }
-    ) {
-        if (!this.hid.connected) {
-            await this.hid.open(openCallback,
-                [{ usagePage: 0xff60, usage: 0x61 }]
-            );
-            this.hid.setReceiveCallback(this.receiveCallback.bind(this))
-            this.hid.setCloseCallback(closeCallback);
+      this.hid.setReceiveCallback(this.receiveCallback.bind(this))
+    })
+
+    return Uint8Array.from(vial_def.flat()).slice(0, size)
+  }
+
+  async GetLayerCount() {
+    const res = await this.Command([via_command_id.id_dynamic_keymap_get_layer_count])
+    return res ? res[1] : 1
+  }
+
+  async GetLayer(
+    layer: number,
+    matrix_definition: { row: number; col: number },
+  ): Promise<number[]> {
+    const matrix_len = matrix_definition.row * matrix_definition.col * 2 // 2byte per key
+    const start = layer * matrix_len
+
+    const page_len = Math.ceil(matrix_len / 28)
+    const keymap_buffer: number[][] = []
+
+    await navigator.locks.request('vial-keyboard', async () => {
+      this.hid.setReceiveCallback((res) => {
+        console.log(res)
+        keymap_buffer.push(Array.from(res.slice(4)))
+      })
+
+      for (let page = 0; page < page_len; page++) {
+        await this.hid.write(
+          Uint8Array.from([
+            via_command_id.id_dynamic_keymap_get_buffer,
+            (start + page * 28) >> 8,
+            (start + page * 28) & 0xff,
+            28,
+          ]),
+        )
+      }
+
+      const timeout_max = 3000
+      let timeout = timeout_max
+      let current_len = keymap_buffer.length
+      while (keymap_buffer.length < page_len) {
+        await this.sleep(50)
+        if (current_len != keymap_buffer.length) {
+          current_len = keymap_buffer.length
+          timeout = timeout_max
+        } else {
+          timeout -= 50
+          if (timeout < 0) {
+            break
+          }
         }
+      }
+
+      this.hid.setReceiveCallback(this.receiveCallback.bind(this))
+    })
+
+    console.log(keymap_buffer)
+
+    return keymap_buffer.flat().reduce((p: number[], c, i) => {
+      if (i & 1) {
+        const b = p.pop()
+        p.push((b! << 8) | c)
+      } else {
+        p.push(c)
+      }
+      return p
+    }, [])
+  }
+
+  async GetDynamicEntryCount() {
+    const res = await this.Command([via_command_id.id_vial, vial_command_id.vial_dynamic_entry_op])
+    return {
+      tapdance: res[0],
+      combo: res[1],
+      override: res[2],
     }
+  }
 
-    async Close() {
-        await this.hid.close();
-    }
+  async GetCustomValue(id: number[]): Promise<number> {
+    const res = await this.Command([
+      via_command_id.id_unhandled,
+      via_command_id.id_custom_get_value,
+      ...id,
+    ])
+    return (
+      res[2 + id.length] |
+      (res[3 + id.length] << 8) |
+      (res[4 + id.length] << 16) |
+      (res[5 + id.length] << 24)
+    )
+  }
 
-    Connected() {
-        return this.hid.connected;
-    }
+  async SetCustomValue(id: number[], value: number): Promise<void> {
+    await this.Command([
+      via_command_id.id_unhandled,
+      via_command_id.id_custom_set_value,
+      ...id,
+      value & 0xff,
+      (value >> 8) & 0xff,
+      (value >> 16) & 0xff,
+      (value >> 24) & 0xff,
+    ])
+  }
 
-    async Command(msg: ArrayLike<number>) {
-        return navigator.locks.request("vial-keyboard", async () => {
-            if (!this.hid.connected) await this.Open();
-            const send = Uint8Array.from(msg);
-            try {
-                await this.hid.write(Uint8Array.from(send));
-            } catch (error) {
-                await this.hid.close()
-                throw error;
-            }
-            const res = await this.readResponse(500);
-            console.log(`received: ${res}`)
+  async SaveCustomValue(id: number[]): Promise<void> {
+    await this.Command([via_command_id.id_unhandled, via_command_id.id_custom_save, ...id])
+  }
 
-            return res
-        });
-    }
+  async ResetEeprom(): Promise<void> {
+    await this.Command([via_command_id.id_unhandled, via_command_id.id_eeprom_reset])
+  }
 
-    async GetProtocolVersion() {
-        const res = await this.Command([via_command_id.id_get_protocol_version])
-        return res ? (res[2] | (res[3] << 8)) : 0;
-    }
-
-    async GetLayoutOption() {
-        const res = await this.Command([via_command_id.id_get_keyboard_value, via_keyboard_value_id.id_layout_options])
-        return res ? (res[5] | (res[4] << 8) | (res[3] << 16) | (res[2] << 24)) : 0;
-    }
-
-    async GetVialKeyboardId() {
-        const res = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_keyboard_id]);
-        return res?.slice(0, 4);
-    }
-
-    async GetVialCompressedDefinition(): Promise<Uint8Array> {
-        const res_size = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_size]);
-        const size = res_size[0] + (res_size[1] << 8) + (res_size[2] << 16) + (res_size[3] << 24);
-
-        const page_len = Math.floor((size + VIAL_PAGE_SIZE - 1) / VIAL_PAGE_SIZE);
-        const vial_def: number[][] = [];
-
-        await navigator.locks.request("vial-keyboard", async () => {
-            this.hid.setReceiveCallback(res => { console.log(res); vial_def.push(Array.from(res)) });
-
-            for (let page = 0; page < page_len; page++) {
-                await this.hid.write(Uint8Array.from([via_command_id.id_vial, vial_command_id.vial_get_def, page]));
-            }
-
-            const timeout_max = 3000;
-            let timeout = timeout_max;
-            let current_len = vial_def.length;
-            while (vial_def.length < page_len) {
-                await this.sleep(50);
-                if (current_len != vial_def.length) {
-                    current_len = vial_def.length
-                    timeout = timeout_max;
-                }
-                else {
-                    timeout -= 50;
-                    if (timeout < 0) { break; }
-                }
-            }
-
-            this.hid.setReceiveCallback(this.receiveCallback.bind(this));
-        });
-
-        return Uint8Array.from(vial_def.flat()).slice(0, size);
-    }
-
-    async GetLayerCount() {
-        const res = await this.Command([via_command_id.id_dynamic_keymap_get_layer_count]);
-        return res ? res[1] : 1;
-    }
-
-    async GetLayer(layer: number, matrix_definition: { row: number, col: number }): Promise<number[]> {
-        const matrix_len = matrix_definition.row * matrix_definition.col * 2; // 2byte per key
-        const start = layer * matrix_len;
-
-        const page_len = Math.ceil(matrix_len / 28);
-        const keymap_buffer: number[][] = [];
-
-        await navigator.locks.request("vial-keyboard", async () => {
-            this.hid.setReceiveCallback(res => { console.log(res); keymap_buffer.push(Array.from(res.slice(4))) });
-
-            for (let page = 0; page < page_len; page++) {
-                await this.hid.write(Uint8Array.from([via_command_id.id_dynamic_keymap_get_buffer,
-                (start + page * 28) >> 8, (start + page * 28) & 0xff, 28])
-                )
-            }
-
-            const timeout_max = 3000;
-            let timeout = timeout_max;
-            let current_len = keymap_buffer.length;
-            while (keymap_buffer.length < page_len) {
-                await this.sleep(50);
-                if (current_len != keymap_buffer.length) {
-                    current_len = keymap_buffer.length
-                    timeout = timeout_max;
-                }
-                else {
-                    timeout -= 50;
-                    if (timeout < 0) { break; }
-                }
-            }
-
-            this.hid.setReceiveCallback(this.receiveCallback.bind(this));
-        }
-        );
-
-        console.log(keymap_buffer);
-
-        return keymap_buffer.flat().reduce((p: number[], c, i) => {
-            if (i & 1) {
-                const b = p.pop();
-                p.push((b! << 8) | c);
-            } else {
-                p.push(c);
-            }
-            return p;
-        }, []);
-    }
-
-    async GetCustomValue(id: number[]): Promise<number> {
-        const res = await this.Command([via_command_id.id_unhandled, via_command_id.id_custom_get_value, ...id]);
-        return res[2 + id.length] | (res[3 + id.length] << 8) | (res[4 + id.length] << 16) | (res[5 + id.length] << 24)
-    }
-
-    async SetCustomValue(id: number[], value: number): Promise<void> {
-        await this.Command([via_command_id.id_unhandled, via_command_id.id_custom_set_value, ...id, value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff]);
-    }
-
-    async SaveCustomValue(id: number[]): Promise<void> {
-        await this.Command([via_command_id.id_unhandled, via_command_id.id_custom_save, ...id]);
-    }
-    
-    async ResetEeprom():Promise<void>{
-        await this.Command([via_command_id.id_unhandled, via_command_id.id_eeprom_reset]);
-    }
-
-    GetHidName() {
-        return this.hid.getName()
-    }
+  GetHidName() {
+    return this.hid.getName()
+  }
 }
 
 export { VialKeyboard as ViaKeyboard };
