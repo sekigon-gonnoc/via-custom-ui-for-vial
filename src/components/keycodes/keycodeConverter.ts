@@ -118,16 +118,16 @@ function convertIntToKeycode(
 export class KeycodeConverter {
   private customKeycodes
   private layer: number
+  private tapKeycodeList: QmkKeycode[] = []
+  private holdKeycodeList: QmkKeycode[] = []
   constructor(
     layer: number = 16,
     customKeycodes?: { name: string; title: string; shortName: string }[],
   ) {
     this.customKeycodes = customKeycodes
     this.layer = layer
-  }
 
-  public getTapKeycodeList(): QmkKeycode[] {
-    return Object.entries(keycodes).map((k) => {
+    this.tapKeycodeList = Object.entries(keycodes).map((k) => {
       const value = parseInt(k[0])
       if (
         this.customKeycodes &&
@@ -135,7 +135,7 @@ export class KeycodeConverter {
         value - keycode_range.QK_KB.start < this.customKeycodes.length
       ) {
         const customKey = this.customKeycodes[value - keycode_range.QK_KB.start]
-        return { value: value, key: customKey.name, label: customKey.shortName }
+        return { group: 'custom', value: value, key: customKey.name, label: customKey.shortName }
       } else {
         return {
           value: parseInt(k[0]),
@@ -144,12 +144,9 @@ export class KeycodeConverter {
         }
       }
     })
-  }
 
-  public getHoldKeycodeList(): QmkKeycode[] {
-    const qmkeycodes: QmkKeycode[] = []
-    qmkeycodes.push(DefaultQmkKeycode, ModTapKeycodeBase)
-    qmkeycodes.push(
+    this.holdKeycodeList.push(DefaultQmkKeycode, ModTapKeycodeBase)
+    this.holdKeycodeList.push(
       ...[...Array(this.layer)].map((_, layer) => {
         return {
           label: `Layer Tap ${layer}`,
@@ -158,8 +155,14 @@ export class KeycodeConverter {
         }
       }),
     )
+  }
 
-    return qmkeycodes
+  public getTapKeycodeList(): QmkKeycode[] {
+    return this.tapKeycodeList
+  }
+
+  public getHoldKeycodeList(): QmkKeycode[] {
+    return this.holdKeycodeList
   }
 
   public getTapKeycode(keycode?: QmkKeycode): QmkKeycode {

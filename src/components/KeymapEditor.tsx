@@ -1,8 +1,9 @@
 import { Autocomplete, Box, Button, Checkbox, ClickAwayListener, FormControl, FormControlLabel, FormGroup, MenuItem, Popper, Select, TextField } from "@mui/material";
 import { match, P } from "ts-pattern";
 import { ViaKeyboard } from "../services/vialKeyboad";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DefaultQmkKeycode,  QmkKeycode, KeycodeConverter, ModifierBits, ModifierBit } from "./keycodes/keycodeConverter";
+import { KeycodeCatalog } from "./KeycodeCatalog";
 
 export interface KeymapProperties {
   via: ViaKeyboard;
@@ -265,26 +266,6 @@ function KeymapKeyPopUp(props: {
   )
 }
 
-function KeyListKey(props: { keycode: QmkKeycode }) {
-  return (
-    <div
-      style={{
-        width: WIDTH_1U - 3,
-        height: WIDTH_1U - 3,
-        outline: 'solid',
-        outlineWidth: '1px',
-        outlineColor: 'black',
-      }}
-      draggable={true}
-      onDragStart={(event) => {
-        event.dataTransfer.setData('QmkKeycode', JSON.stringify(props.keycode))
-      }}
-    >
-      {props.keycode.label}
-    </div>
-  )
-}
-
 function convertToKeymapKeys(
   props: KeymapProperties,
   layoutOptions: { [layout: number]: number },
@@ -409,15 +390,23 @@ function KeymapLayer(props: {
   const [focusedKey, setFocusedKey] = useState<KeymapKeyProperties | undefined>(undefined)
   const [candidateKeycode, setCandidateKeycode]=useState<QmkKeycode>(DefaultQmkKeycode);
 
+  const keymapkeys = convertToKeymapKeys(
+    props.keymapProps,
+    props.layoutOption,
+    props.keymap,
+    props.keycodeconverter,
+  )
+
   return (
     <>
-      <div style={{ position: 'relative', marginTop: 50 }}>
-        {convertToKeymapKeys(
-          props.keymapProps,
-          props.layoutOption,
-          props.keymap,
-          props.keycodeconverter,
-        ).map((p) =>
+      <div
+        style={{
+          position: 'relative',
+          marginTop: 50,
+          height: `${(Math.max(...keymapkeys.map((k) => k.y)) + 2) * WIDTH_1U}px`,
+        }}
+      >
+        {keymapkeys.map((p) =>
           KeymapKey({
             ...p,
             onKeycodeChange: props.onKeycodeChange,
@@ -464,8 +453,8 @@ export function KeymapEditor(props: KeymapProperties) {
     navigator.locks.request("load-layout", async () => {
       const layout = await props.via.GetLayoutOption();
       setLayoutOption({ 0: layout });
-      const layer = await props.via.GetLayerCount();
-      setLayerCount(layer);
+      const layerCount = await props.via.GetLayerCount();
+      setLayerCount(layerCount);
       setLayer(0);
       if (!Object.keys(keymap).includes("0")) {
         const layerKeys = await props.via.GetLayer(0, {
@@ -478,6 +467,10 @@ export function KeymapEditor(props: KeymapProperties) {
       }
     });
   }, [props.layouts]);
+
+  const keycodeConverter = useMemo(() => {
+    return new KeycodeConverter(layerCount, props.customKeycodes)
+  }, [layerCount, props.customKeycodes])
 
   return (
     <>
@@ -512,7 +505,7 @@ export function KeymapEditor(props: KeymapProperties) {
             keymapProps={props}
             layoutOption={layoutOption}
             keymap={keymap[layer]}
-            keycodeconverter={new KeycodeConverter(layerCount, props.customKeycodes)}
+            keycodeconverter={keycodeConverter}
             onKeycodeChange={(target, newKeycode) => {
               const offset = props.matrix.cols * target.matrix[0] + target.matrix[1]
               const newKeymap = { ...keymap }
@@ -528,11 +521,14 @@ export function KeymapEditor(props: KeymapProperties) {
           <></>
         )}
       </div>
-      <div style={{ marginTop: 400 }}>
-        <KeyListKey
-          keycode={new KeycodeConverter(layerCount, props.customKeycodes).convertIntToKeycode(4)}
-        ></KeyListKey>
-      </div>
+      <KeycodeCatalog
+        keycodeConverter={keycodeConverter}
+        tab={[
+          { label: 'Basic', keygroup: ['basic', 'modifiers'] },
+          { label: 'Mouse', keygroup: ['mouse'] },
+          { label: 'User', keygroup: ['custom', 'kb', 'user'] },
+        ]}
+      ></KeycodeCatalog>
     </>
   )
 }
