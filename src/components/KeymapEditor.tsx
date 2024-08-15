@@ -1,8 +1,8 @@
-import { Autocomplete, Box, Button, ClickAwayListener, FormControl, MenuItem, Popper, Select, TextField } from "@mui/material";
+import { Autocomplete, Box, Button, Checkbox, ClickAwayListener, FormControl, FormControlLabel, FormGroup, MenuItem, Popper, Select, TextField } from "@mui/material";
 import { match, P } from "ts-pattern";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { useEffect, useState } from "react";
-import { DefaultQmkKeycode,  QmkKeycode, KeycodeConverter } from "./keycodes/keycodeConverter";
+import { DefaultQmkKeycode,  QmkKeycode, KeycodeConverter, ModifierBits, ModifierBit } from "./keycodes/keycodeConverter";
 
 export interface KeymapProperties {
   via: ViaKeyboard;
@@ -110,11 +110,15 @@ function KeymapKeyPopUp(props: {
   const [holdInputValue, setHoldInputValue] = useState<string>(
     props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode).label,
   )
+  const [modsValue, setModsValue] = useState<ModifierBits>(
+    props.keycodeconverter.getModifier(props.keymapKey?.keycode),
+  )
   useEffect(() => {
     setTapValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode))
     setTapInputValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode).label)
     setHoldValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode))
     setHoldInputValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode).label)
+    setModsValue(props.keycodeconverter.getModifier(props.keymapKey?.keycode))
   }, [props.keymapKey])
   return (
     <ClickAwayListener
@@ -123,7 +127,7 @@ function KeymapKeyPopUp(props: {
       onClickAway={() => props.onClickAway?.()}
     >
       <Popper open={props.open} anchorEl={props.anchor} placement='bottom-start'>
-        <Box height={100} width={200} border={1} p={1} bgcolor='white'>
+        <Box width={400} border={1} p={1} bgcolor='white'>
           <Autocomplete
             value={tapValue}
             onChange={(event: any, newValue) => {
@@ -134,6 +138,7 @@ function KeymapKeyPopUp(props: {
                   props.keycodeconverter.combineKeycodes(
                     newValue ?? DefaultQmkKeycode,
                     holdValue,
+                    modsValue,
                   ) ?? DefaultQmkKeycode,
               })
             }}
@@ -147,7 +152,7 @@ function KeymapKeyPopUp(props: {
             }}
             getOptionKey={(option) => option.key}
             getOptionLabel={(option) => option.label}
-            renderInput={(params) => <TextField {...params} label='Tap' />}
+            renderInput={(params) => <TextField {...params} label='Base(Tap)' />}
             renderOption={(props, option, state, ownerState) => (
               <Box component='li' {...props}>
                 <div>{option.label}</div>
@@ -163,8 +168,11 @@ function KeymapKeyPopUp(props: {
               props.onChange?.({
                 keymapkey: props.keymapKey,
                 keycode:
-                  props.keycodeconverter.combineKeycodes(tapValue, newValue ?? DefaultQmkKeycode) ??
-                  DefaultQmkKeycode,
+                  props.keycodeconverter.combineKeycodes(
+                    tapValue,
+                    newValue ?? DefaultQmkKeycode,
+                    modsValue,
+                  ) ?? DefaultQmkKeycode,
               })
             }}
             inputValue={holdInputValue}
@@ -177,7 +185,7 @@ function KeymapKeyPopUp(props: {
             }}
             getOptionKey={(option) => option.key}
             getOptionLabel={(option) => option.label}
-            renderInput={(params) => <TextField {...params} label='Hold' />}
+            renderInput={(params) => <TextField {...params} label='Option(Hold)' />}
             renderOption={(props, option, state, ownerState) => (
               <Box component='li' {...props}>
                 <div>{option.label}</div>
@@ -185,6 +193,41 @@ function KeymapKeyPopUp(props: {
               </Box>
             )}
           ></Autocomplete>
+          <FormGroup row>
+            {(
+              [
+                { Ctrl: ModifierBit.Ctrl },
+                { Shift: ModifierBit.Shift },
+                { Alt: ModifierBit.Alt },
+                { GUI: ModifierBit.GUI },
+                { UseRight: ModifierBit.UseRight },
+              ] as { [key: string]: ModifierBit }[]
+            ).map((k) => (
+              <FormControlLabel
+                value={Object.keys(k)[0]}
+                sx={{ margin: 1 }}
+                control={
+                  <Checkbox
+                    checked={(modsValue & Object.values(k)[0]) !== 0}
+                    onChange={() => {
+                      const newMods = modsValue | Object.values(k)[0]
+                      console.log(`new mods ${newMods}`)
+                      setModsValue(newMods)
+                      props.onChange?.({
+                        keymapkey: props.keymapKey,
+                        keycode:
+                          props.keycodeconverter.combineKeycodes(tapValue, holdValue, newMods) ??
+                          DefaultQmkKeycode,
+                      })
+                    }}
+                    size='small'
+                  ></Checkbox>
+                }
+                label={Object.keys(k)[0]}
+                labelPlacement='top'
+              ></FormControlLabel>
+            ))}
+          </FormGroup>
         </Box>
       </Popper>
     </ClickAwayListener>

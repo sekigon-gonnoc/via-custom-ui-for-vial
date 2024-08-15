@@ -20,6 +20,16 @@ export type QmkKeycode = {
   holdLabel?: string
 }
 
+export enum ModifierBit {
+  Ctrl = 1 << 0,
+  Shift = 1 << 1,
+  Alt = 1 << 2,
+  GUI = 1 << 3,
+  UseRight = 1 << 4,
+}
+
+export type ModifierBits = number
+
 export const DefaultQmkKeycode: QmkKeycode = {
   value: 0,
   key: 'KC_NO',
@@ -138,7 +148,7 @@ export class KeycodeConverter {
 
   public getHoldKeycodeList(): QmkKeycode[] {
     const qmkeycodes: QmkKeycode[] = []
-    qmkeycodes.push(ModTapKeycodeBase)
+    qmkeycodes.push(DefaultQmkKeycode, ModTapKeycodeBase)
     qmkeycodes.push(
       ...[...Array(this.layer)].map((_, layer) => {
         return {
@@ -187,9 +197,37 @@ export class KeycodeConverter {
     }
   }
 
-  public combineKeycodes(tap: QmkKeycode, hold: QmkKeycode): QmkKeycode | null {
+  public getModifier(keycode?: QmkKeycode): ModifierBits {
+    if (keycode === undefined) {
+      return 0
+    } else if (
+      keycode_range.QK_MODS.start <= keycode.value &&
+      keycode.value <= keycode_range.QK_MOD_TAP.end
+    ) {
+      return (keycode.value >> 8) & 0x1f
+    } else {
+      return 0
+    }
+  }
+
+  public combineKeycodes(
+    tap: QmkKeycode,
+    hold: QmkKeycode,
+    mods: ModifierBits = 0,
+  ): QmkKeycode | null {
     if (
+      keycode_range.QK_BASIC.start <= tap.value &&
+      tap.value <= keycode_range.QK_BASIC.end &&
+      hold.value == 0
+    ) {
+      return this.convertIntToKeycode(tap.value | (mods << 8))
+    } else if (
       keycode_range.QK_MOD_TAP.start <= hold.value &&
+      hold.value <= keycode_range.QK_MOD_TAP.end
+    ) {
+      return this.convertIntToKeycode((tap.value & 0x00ff) | (hold.value & 0xff00) | (mods << 8))
+    } else if (
+      keycode_range.QK_LAYER_TAP.start <= hold.value &&
       hold.value <= keycode_range.QK_LAYER_TAP.end
     ) {
       return this.convertIntToKeycode((tap.value & 0x00ff) | (hold.value & 0xff00))
