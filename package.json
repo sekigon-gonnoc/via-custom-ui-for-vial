@@ -17,6 +17,7 @@
     "@mui/icons-material": "^5.16.7",
     "@mui/material": "^5.15.15",
     "hjson": "^3.2.2",
+    "match-sorter": "^6.3.4",
     "mui-color-input": "^2.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

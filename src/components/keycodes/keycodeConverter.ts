@@ -37,7 +37,7 @@ export const DefaultQmkKeycode: QmkKeycode = {
 };
 
 const ModTapKeycodeBase: QmkKeycode = {
-  label: "ModTap",
+  label: "Mod Tap",
   value: keycode_range.QK_MOD_TAP.start,
   key: "MOD_TAP(kc)",
 };
@@ -102,6 +102,63 @@ export class KeycodeConverter {
         }),
       );
     }
+
+    if (layer > 0) {
+      this.tapKeycodeList.push(
+        ...[...Array(layer)].map((_, idx) => {
+          return {
+            group: "layer",
+            value: keycode_range.QK_TO.start + idx,
+            key: `To Layer ${idx}`,
+            label: `TO${idx}`,
+          };
+        }),
+      );
+      this.tapKeycodeList.push(
+        ...[...Array(layer)].map((_, idx) => {
+          return {
+            group: "layer",
+            value: keycode_range.QK_MOMENTARY.start + idx,
+            key: `Momentary Layer ${idx}`,
+            label: `MO${idx}`,
+          };
+        }),
+      );
+      this.tapKeycodeList.push(
+        ...[...Array(layer)].map((_, idx) => {
+          return {
+            group: "layer",
+            value: keycode_range.QK_DEF_LAYER.start + idx,
+            key: `Default Layer ${idx}`,
+            label: `DF${idx}`,
+          };
+        }),
+      );
+      this.tapKeycodeList.push(
+        ...[...Array(layer)].map((_, idx) => {
+          return {
+            group: "layer",
+            value: keycode_range.QK_TOGGLE_LAYER.start + idx,
+            key: `Toggle Layer ${idx}`,
+            label: `TG${idx}`,
+          };
+        }),
+      );
+      this.tapKeycodeList.push(
+        ...[...Array(layer)].map((_, idx) => {
+          return {
+            group: "layer",
+            value: keycode_range.QK_ONE_SHOT_LAYER.start + idx,
+            key: `Oneshot Layer ${idx}`,
+            label: `OSL${idx}`,
+          };
+        }),
+      );
+    }
+
+    this.tapKeycodeList = this.tapKeycodeList.map((k) => {
+      return { ...k, label: k.label.length > 2 ? k.label.replace(/_/g, " ") : k.label };
+    });
 
     this.holdKeycodeList.push(DefaultQmkKeycode, ModTapKeycodeBase);
     this.holdKeycodeList.push(
@@ -182,6 +239,8 @@ export class KeycodeConverter {
       hold.value == 0
     ) {
       return this.convertIntToKeycode(tap.value | (mods << 8));
+    } else if (tap.value > keycode_range.QK_BASIC.end) {
+      return this.convertIntToKeycode(tap.value);
     } else if (
       keycode_range.QK_MOD_TAP.start <= hold.value &&
       hold.value <= keycode_range.QK_MOD_TAP.end

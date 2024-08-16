@@ -25,6 +25,7 @@ import { KeycodeCatalog } from "./KeycodeCatalog";
 import { TapDanceEditor } from "./TapDanceEditor";
 import { match, P } from "ts-pattern";
 import { MacroEditor } from "./MacroEditor";
+import { matchSorter } from "match-sorter";
 
 export interface KeymapProperties {
   matrix: { rows: number; cols: number };
@@ -135,6 +136,10 @@ export function KeymapKeyPopUp(props: {
     props.keycodeconverter.getModifier(props.keycode),
   );
   const [keycodeValue, setKeycodeValue] = useState<string>("");
+
+  const filterOptions = (options: QmkKeycode[], { inputValue }: { inputValue: string }) =>
+    matchSorter(options, inputValue, { keys: ["label", "key", "aliases.*"] });
+
   useEffect(() => {
     setTapValue(props.keycodeconverter.getTapKeycode(props.keycode));
     setTapInputValue(props.keycodeconverter.getTapKeycode(props.keycode).label);
@@ -153,6 +158,7 @@ export function KeymapKeyPopUp(props: {
         <Box width={400} border={1} p={1} bgcolor="white">
           <Autocomplete
             value={tapValue}
+            filterOptions={filterOptions}
             onChange={(event: any, newValue) => {
               setTapValue(newValue ?? DefaultQmkKeycode);
               const newKeycode =
@@ -188,6 +194,7 @@ export function KeymapKeyPopUp(props: {
 
           <Autocomplete
             value={holdValue}
+            filterOptions={filterOptions}
             onChange={(event: any, newValue) => {
               setHoldValue(newValue ?? DefaultQmkKeycode);
               const newKeycode =
@@ -613,6 +620,7 @@ export function KeymapEditor(props: {
           { label: "User/Wireless", keygroup: ["custom", "kb", "user"] },
           { label: "Media", keygroup: ["media"] },
           { label: "Quantum", keygroup: ["quantum"] },
+          { label: "Layer", keygroup: ["layer"] },
           { label: "Macro", keygroup: ["macro"] },
           { label: "TapDance", keygroup: ["tapdance"] },
         ]}
