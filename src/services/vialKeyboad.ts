@@ -48,7 +48,17 @@ enum vial_command_id {
   vial_qmk_settings_get = 0x0a,
   vial_qmk_settings_set = 0x0b,
   vial_qmk_settings_reset = 0x0c,
-  vial_dynamic_entry_op = 0x0d /* operate on tapdance, combos, etc */,
+  vial_dynamic_entry_op = 0x0d,
+}
+
+enum dynamic_vial_id {
+  dynamic_vial_get_number_of_entries = 0x00,
+  dynamic_vial_tap_dance_get = 0x01,
+  dynamic_vial_tap_dance_set = 0x02,
+  dynamic_vial_combo_get = 0x03,
+  dynamic_vial_combo_set = 0x04,
+  dynamic_vial_key_override_get = 0x05,
+  dynamic_vial_key_override_set = 0x06,
 }
 
 const VIAL_PAGE_SIZE = 32;
@@ -242,12 +252,41 @@ class VialKeyboard {
   }
 
   async GetDynamicEntryCount() {
-    const res = await this.Command([via_command_id.id_vial, vial_command_id.vial_dynamic_entry_op]);
+    const res = await this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_dynamic_entry_op,
+      dynamic_vial_id.dynamic_vial_get_number_of_entries,
+    ]);
     return {
       tapdance: res[0],
       combo: res[1],
       override: res[2],
     };
+  }
+
+  async GetTapDance(id: number) {
+    const res = await this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_dynamic_entry_op,
+      dynamic_vial_id.dynamic_vial_tap_dance_get,
+      id & 0xff,
+    ]);
+
+    return res[0] == 0
+      ? {
+          onTap: res[1] | (res[2] << 8),
+          onHold: res[3] | (res[4] << 8),
+          onDoubleTap: res[5] | (res[6] << 8),
+          onTapHold: res[7] | (res[8] << 8),
+          tappingTerm: res[9] | (res[10] << 8),
+        }
+      : {
+          onTap: 0,
+          onHold: 0,
+          onDoubleTap: 0,
+          onTapHold: 0,
+          tappingTerm: 0,
+        };
   }
 
   async GetCustomValue(id: number[]): Promise<number> {

@@ -16,11 +16,13 @@ import {
   Dialog,
   DialogContent,
   DialogActions,
+  Box,
 } from "@mui/material";
 import { MenuItemProperties } from "./components/ViaMenuItem";
 import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
 import { match, P } from "ts-pattern";
 import { act } from "react-dom/test-utils";
+import { TapDanceEditor } from "./components/TapDanceEditor";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");
@@ -30,6 +32,11 @@ const via = new ViaKeyboard();
 
 function App() {
   const [vialJson, setVialJson] = useState<any>(undefined);
+  const [dynamicEntryCount, setDynamicEntryCount] = useState({
+    tapdance: 0,
+    combo: 0,
+    override: 0,
+  });
   const [customMenus, setCustomMenus] = useState<MenuItemProperties[]>([]);
   const [activeMenu, setActiveMenu] = useState<
     | {
@@ -39,6 +46,9 @@ function App() {
     | {
         menuType: "keymap";
         menu: KeymapProperties;
+      }
+    | {
+        menuType: "tapdance";
       }
   >();
   const [customValues, setCustomValues] = useState<{ [id: string]: number }>({});
@@ -90,6 +100,9 @@ function App() {
     setVialJson(parsed);
     setCustomMenus(parsed?.menus ?? []);
     setKbName(parsed?.name ?? via.GetHidName());
+
+    const dynamicEntryCount = await via.GetDynamicEntryCount();
+    setDynamicEntryCount(dynamicEntryCount);
 
     const customValueId = (parsed.menus as MenuItemProperties[]).flatMap((top) =>
       top.content.reduce((prev: [string, number, number, number?][], section) => {
@@ -198,15 +211,23 @@ function App() {
                 >
                   <ListItemText primary="Keymap" />
                 </ListItemButton>
+                <ListItemButton
+                  onClick={() => {
+                    setActiveMenu({ menuType: "tapdance" });
+                  }}
+                >
+                  <ListItemText primary="Tap Dance" />
+                </ListItemButton>
               </List>
             </div>
             <Divider />
             {customMenus.map((top) => (
-              <>
+              <Box key={top.label}>
                 <ListSubheader> {top.label}</ListSubheader>
                 <List disablePadding>
                   {top.content.map((menu) => (
                     <ListItemButton
+                      key={menu.label}
                       onClick={() => {
                         setActiveMenu({ menuType: "customMenu", menu: menu });
                       }}
@@ -216,7 +237,7 @@ function App() {
                   ))}
                 </List>
                 <Divider />
-              </>
+              </Box>
             ))}
           </List>
           <Grid container rowSpacing={1} columnSpacing={2}>
@@ -301,18 +322,26 @@ function App() {
                 }}
               ></ViaMenuItem>
             ))
-            .with({ menuType: "keymap" }, (menu) => <></>)
+            .with(P._, () => <></>)
             .exhaustive()}
           {vialJson === undefined ? (
             <></>
           ) : (
-            <div
-              style={{
-                display: activeMenu?.menuType === "keymap" ? "block" : "none",
-              }}
-            >
-              <KeymapEditor {...vialJson!} via={via}></KeymapEditor>
-            </div>
+            <>
+              <div hidden={activeMenu?.menuType !== "keymap"}>
+                <KeymapEditor
+                  {...vialJson!}
+                  via={via}
+                  dynamicEntryCount={dynamicEntryCount}
+                ></KeymapEditor>
+              </div>
+              <div hidden={activeMenu?.menuType !== "tapdance" || dynamicEntryCount.tapdance === 0}>
+                <TapDanceEditor
+                  via={via}
+                  tapdanceCount={dynamicEntryCount.tapdance}
+                ></TapDanceEditor>
+              </div>
+            </>
           )}
         </Grid>
         <Grid item xs={1}></Grid>

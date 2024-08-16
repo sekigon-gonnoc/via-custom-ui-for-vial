@@ -94,35 +94,37 @@ export function KeycodeCatalog(props: {
           }}
         >
           {props.tab.map((tab) => (
-            <Tab label={tab.label}></Tab>
+            <Tab key={tab.label} label={tab.label}></Tab>
           ))}
         </Tabs>
       </Box>
       {props.tab.map((tab, index) => (
-        <CustomTabPanel value={tabValue} index={index}>
-          {tab.keygroup.map((keygroup) =>
-            props.keycodeConverter.getTapKeycodeList().some((k) => k.group === keygroup) ? (
-              <>
-                <Box sx={{ mt: 1 }}>{keygroup}</Box>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: `repeat(auto-fit, ${WIDTH_1U}px)`,
-                    gap: "8px 5px",
-                  }}
-                >
-                  {props.keycodeConverter
-                    .getTapKeycodeList()
-                    .filter((k) => k.group === keygroup)
-                    .map((keycode) => (
-                      <KeyListKey keycode={keycode}></KeyListKey>
-                    ))}
-                </Box>
-              </>
-            ) : (
-              <></>
-            ),
-          )}
+        <CustomTabPanel key={index} value={tabValue} index={index}>
+          {tab.keygroup.map((keygroup) => (
+            <Box key={keygroup}>
+              {props.keycodeConverter.getTapKeycodeList().some((k) => k.group === keygroup) ? (
+                <>
+                  <Box sx={{ mt: 1 }}>{keygroup}</Box>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(auto-fit, ${WIDTH_1U}px)`,
+                      gap: "8px 5px",
+                    }}
+                  >
+                    {props.keycodeConverter
+                      .getTapKeycodeList()
+                      .filter((k) => k.group === keygroup)
+                      .map((keycode) => (
+                        <KeyListKey key={keycode.value} keycode={keycode}></KeyListKey>
+                      ))}
+                  </Box>
+                </>
+              ) : (
+                <></>
+              )}
+            </Box>
+          ))}
         </CustomTabPanel>
       ))}
     </>

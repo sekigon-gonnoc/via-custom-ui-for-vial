@@ -42,10 +42,15 @@ export interface KeymapProperties {
         }
     )[][];
   };
+  dynamicEntryCount: {
+    tapdance: 0;
+    combo: 0;
+    override: 0;
+  };
   customKeycodes?: { name: string; title: string; shortName: string }[];
 }
 
-interface KeymapKeyProperties {
+export interface KeymapKeyProperties {
   matrix: number[];
   x: number;
   y: number;
@@ -62,7 +67,7 @@ interface KeymapKeyProperties {
   onClick?: (target: HTMLElement) => void;
 }
 
-const WIDTH_1U = 50;
+export const WIDTH_1U = 50;
 export function KeymapKey(props: KeymapKeyProperties) {
   return (
     <div
@@ -109,38 +114,39 @@ export function KeymapKey(props: KeymapKeyProperties) {
   );
 }
 
-function KeymapKeyPopUp(props: {
+export function KeymapKeyPopUp(props: {
   open: boolean;
   keycodeconverter: KeycodeConverter;
+  keycode: QmkKeycode;
   anchor?: HTMLElement;
   keymapKey?: KeymapKeyProperties;
   onClickAway?: () => void;
   onChange?: (event: { keymapkey?: KeymapKeyProperties; keycode: QmkKeycode }) => void;
 }) {
   const [tapValue, setTapValue] = useState<QmkKeycode>(
-    props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode),
+    props.keycodeconverter.getTapKeycode(props.keycode),
   );
   const [tapInputValue, setTapInputValue] = useState<string>(
-    props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode).label,
+    props.keycodeconverter.getTapKeycode(props.keycode).label,
   );
   const [holdValue, setHoldValue] = useState<QmkKeycode>(
-    props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode),
+    props.keycodeconverter.getHoldKeycode(props.keycode),
   );
   const [holdInputValue, setHoldInputValue] = useState<string>(
-    props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode).label,
+    props.keycodeconverter.getHoldKeycode(props.keycode).label,
   );
   const [modsValue, setModsValue] = useState<ModifierBits>(
-    props.keycodeconverter.getModifier(props.keymapKey?.keycode),
+    props.keycodeconverter.getModifier(props.keycode),
   );
   const [keycodeValue, setKeycodeValue] = useState<string>("");
   useEffect(() => {
-    setTapValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode));
-    setTapInputValue(props.keycodeconverter.getTapKeycode(props.keymapKey?.keycode).label);
-    setHoldValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode));
-    setHoldInputValue(props.keycodeconverter.getHoldKeycode(props.keymapKey?.keycode).label);
-    setModsValue(props.keycodeconverter.getModifier(props.keymapKey?.keycode));
-    setKeycodeValue((props.keymapKey?.keycode.value ?? 0).toString());
-  }, [props.keymapKey]);
+    setTapValue(props.keycodeconverter.getTapKeycode(props.keycode));
+    setTapInputValue(props.keycodeconverter.getTapKeycode(props.keycode).label);
+    setHoldValue(props.keycodeconverter.getHoldKeycode(props.keycode));
+    setHoldInputValue(props.keycodeconverter.getHoldKeycode(props.keycode).label);
+    setModsValue(props.keycodeconverter.getModifier(props.keycode));
+    setKeycodeValue((props.keycode.value ?? 0).toString());
+  }, [props.keycode]);
   return (
     <ClickAwayListener
       mouseEvent="onMouseDown"
@@ -227,8 +233,9 @@ function KeymapKeyPopUp(props: {
                 { GUI: ModifierBit.GUI },
                 { UseRight: ModifierBit.UseRight },
               ] as { [key: string]: ModifierBit }[]
-            ).map((k) => (
+            ).map((k, idx) => (
               <FormControlLabel
+                key={idx}
                 value={Object.keys(k)[0]}
                 sx={{ margin: 1 }}
                 control={
@@ -381,6 +388,7 @@ function LayerSelector(props: { layerCount: number; onChange: (layer: number) =>
       {[...Array(props.layerCount)].map((_, idx) => {
         return (
           <Button
+            key={idx}
             value={idx}
             onClick={() => {
               props.onChange(idx);
@@ -438,6 +446,7 @@ function KeymapLayer(props: {
       <KeymapKeyPopUp
         open={popupOpen}
         keycodeconverter={props.keycodeconverter}
+        keycode={focusedKey?.keycode ?? DefaultQmkKeycode}
         anchor={anchorEl}
         keymapKey={focusedKey}
         onClickAway={() => {
@@ -464,11 +473,6 @@ export function KeymapEditor(props: KeymapProperties) {
   const [layerCount, setLayerCount] = useState(1);
   const [layer, setLayer] = useState(0);
   const [keymap, setKeymap] = useState<{ [layer: number]: number[] }>({});
-  const [dynamicEntryCount, setDynamicEntryCount] = useState({
-    tapdance: 0,
-    combo: 0,
-    override: 0,
-  });
 
   useEffect(() => {
     navigator.locks.request("load-layout", async () => {
@@ -484,15 +488,12 @@ export function KeymapEditor(props: KeymapProperties) {
         });
         setKeymap({ ...keymap, 0: layerKeys });
       }
-      const dynamicEntryCount = await props.via.GetDynamicEntryCount();
-      setDynamicEntryCount(dynamicEntryCount);
-      console.log(dynamicEntryCount);
     });
   }, [props.layouts]);
 
   const keycodeConverter = useMemo(() => {
-    return new KeycodeConverter(layerCount, props.customKeycodes, dynamicEntryCount.tapdance);
-  }, [layerCount, props.customKeycodes, dynamicEntryCount]);
+    return new KeycodeConverter(layerCount, props.customKeycodes, props.dynamicEntryCount.tapdance);
+  }, [layerCount, props.customKeycodes, props.dynamicEntryCount]);
 
   return (
     <>
