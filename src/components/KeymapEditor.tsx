@@ -26,6 +26,7 @@ import { TapDanceEditor } from "./TapDanceEditor";
 import { match, P } from "ts-pattern";
 import { MacroEditor } from "./MacroEditor";
 import { matchSorter } from "match-sorter";
+import { ComboEditor } from "./ComboEditor";
 
 export interface KeymapProperties {
   matrix: { rows: number; cols: number };
@@ -561,10 +562,11 @@ export function KeymapEditor(props: {
     override: number;
   };
 }) {
-  const [menuType, setMenuType] = useState<"layer" | "tapdance" | "macro">("layer");
+  const [menuType, setMenuType] = useState<"layer" | "tapdance" | "macro" | "combo">("layer");
   const [layerCount, setLayerCount] = useState(1);
   const [tdIndex, setTdIndex] = useState(-1);
   const [macroIndex, setMacroIndex] = useState(-1);
+  const [comboIndex, setComboIndex] = useState(-1);
 
   useEffect(() => {
     navigator.locks.request("load-layout", async () => {
@@ -612,6 +614,17 @@ export function KeymapEditor(props: {
           }}
         ></MacroEditor>
       </Box>
+      <Box hidden={menuType !== "combo"}>
+        <ComboEditor
+          via={props.via}
+          keycodeConverter={keycodeConverter}
+          comboIndex={comboIndex}
+          comboCount={props.dynamicEntryCount.combo}
+          onBack={() => {
+            setMenuType("layer");
+          }}
+        ></ComboEditor>
+      </Box>
       <KeycodeCatalog
         keycodeConverter={keycodeConverter}
         tab={[
@@ -623,7 +636,10 @@ export function KeymapEditor(props: {
           { label: "Layer", keygroup: ["layer"] },
           { label: "Macro", keygroup: ["macro"] },
           { label: "TapDance", keygroup: ["tapdance"] },
+          { label: "Combo/Override", keygroup: ["combo", "keyoverride"] },
         ]}
+        comboCount={props.dynamicEntryCount.combo}
+        overrideCount={props.dynamicEntryCount.override}
         onTapdanceSelect={(index) => {
           setMenuType("tapdance");
           setTdIndex(index);
@@ -631,6 +647,10 @@ export function KeymapEditor(props: {
         onMacroSelect={(index) => {
           setMenuType("macro");
           setMacroIndex(index);
+        }}
+        onComoboSelect={(index) => {
+          setMenuType("combo");
+          setComboIndex(index);
         }}
       ></KeycodeCatalog>
     </>

@@ -1,10 +1,10 @@
 import { Box, Grid, Tab, Tabs, Tooltip } from "@mui/material";
-import { KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
+import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { useState } from "react";
 import { match, P } from "ts-pattern";
 
 const WIDTH_1U = 50;
-function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void }) {
+function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggable: boolean }) {
   const [isDragging, setIsDragging] = useState(false);
   const [showToolTip, setShowToolTip] = useState(false);
   return (
@@ -26,14 +26,19 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void }) {
           outline: "solid",
           outlineWidth: "1px",
           outlineColor: "black",
+          userSelect: "none",
         }}
-        draggable={true}
+        draggable={props.draggable}
         onDragStart={(event) => {
-          event.dataTransfer.setData("QmkKeycode", JSON.stringify(props.keycode));
-          setIsDragging(true);
+          if (props.draggable) {
+            event.dataTransfer.setData("QmkKeycode", JSON.stringify(props.keycode));
+            setIsDragging(true);
+          }
         }}
         onDragEnd={(event) => {
-          setIsDragging(false);
+          if (props.draggable) {
+            setIsDragging(false);
+          }
         }}
         onMouseMove={(event) => {
           if (!isDragging) return;
@@ -88,8 +93,12 @@ function CustomTabPanel(props: TabPanelProps) {
 export function KeycodeCatalog(props: {
   keycodeConverter: KeycodeConverter;
   tab: { label: string; keygroup: string[] }[];
-  onTapdanceSelect?: (index: number) => void;
+  comboCount?: number;
+  overrideCount?: number;
   onMacroSelect?: (index: number) => void;
+  onTapdanceSelect?: (index: number) => void;
+  onComoboSelect?: (index: number) => void;
+  onKeyoverrideSelect?: (index: number) => void;
 }) {
   const [tabValue, setTabValue] = useState(0);
   return (
@@ -101,6 +110,8 @@ export function KeycodeCatalog(props: {
             setTabValue(newValue);
             console.log("tab");
           }}
+          variant="scrollable"
+          scrollButtons="auto"
         >
           {props.tab.map((tab) => (
             <Tab key={tab.label} label={tab.label}></Tab>
@@ -130,6 +141,7 @@ export function KeycodeCatalog(props: {
                             <KeyListKey
                               key={keycode.value}
                               keycode={keycode}
+                              draggable={true}
                               onClick={() => {
                                 props.onTapdanceSelect?.(keycode.value & 0x1f);
                               }}
@@ -139,16 +151,75 @@ export function KeycodeCatalog(props: {
                             <KeyListKey
                               key={keycode.value}
                               keycode={keycode}
+                              draggable={true}
                               onClick={() => {
                                 props.onMacroSelect?.(keycode.value & 0x1f);
                               }}
                             ></KeyListKey>
                           ))
                           .with(P._, () => (
-                            <KeyListKey key={keycode.value} keycode={keycode}></KeyListKey>
+                            <KeyListKey
+                              key={keycode.value}
+                              keycode={keycode}
+                              draggable={true}
+                            ></KeyListKey>
                           ))
                           .exhaustive();
                       })}
+                  </Box>
+                </>
+              ) : keygroup === "combo" ? (
+                <>
+                  <Box sx={{ mt: 1 }}>{keygroup}</Box>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(auto-fit, ${WIDTH_1U}px)`,
+                      gap: "8px 5px",
+                    }}
+                  >
+                    {[...Array(props.comboCount)].map((_, idx) => (
+                      <KeyListKey
+                        key={`combo-${idx}`}
+                        keycode={{
+                          ...DefaultQmkKeycode,
+                          label: `Combo ${idx}`,
+                          key: `Edit Combo`,
+                          value: idx,
+                        }}
+                        draggable={false}
+                        onClick={() => {
+                          props.onComoboSelect?.(idx);
+                        }}
+                      ></KeyListKey>
+                    ))}
+                  </Box>
+                </>
+              ) : keygroup === "keyoverride" ? (
+                <>
+                  <Box sx={{ mt: 1 }}>{keygroup}</Box>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(auto-fit, ${WIDTH_1U}px)`,
+                      gap: "8px 5px",
+                    }}
+                  >
+                    {[...Array(props.overrideCount)].map((_, idx) => (
+                      <KeyListKey
+                        key={`override-${idx}`}
+                        keycode={{
+                          ...DefaultQmkKeycode,
+                          label: `Override ${idx}`,
+                          key: `Edit override`,
+                          value: idx,
+                        }}
+                        draggable={false}
+                        onClick={() => {
+                          props.onKeyoverrideSelect?.(idx);
+                        }}
+                      ></KeyListKey>
+                    ))}
                   </Box>
                 </>
               ) : (

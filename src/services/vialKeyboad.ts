@@ -342,6 +342,23 @@ class VialKeyboard {
     return macro_buffer.flat();
   }
 
+  async GetCombo(id: number) {
+    const res = await this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_dynamic_entry_op,
+      dynamic_vial_id.dynamic_vial_combo_get,
+      id & 0xff,
+    ]);
+
+    return {
+      key1: res[1] | (res[2] << 8),
+      key2: res[3] | (res[4] << 8),
+      key3: res[5] | (res[6] << 8),
+      key4: res[7] | (res[8] << 8),
+      output: res[9] | (res[10] << 8),
+    };
+  }
+
   async GetCustomValue(id: number[]): Promise<number> {
     const res = await this.Command([
       via_command_id.id_unhandled,
