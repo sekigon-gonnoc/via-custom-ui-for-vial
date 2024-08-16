@@ -7,31 +7,31 @@ import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 
 export function TapDanceEditor(props: {
   via: ViaKeyboard;
+  keycodeConverter: KeycodeConverter;
   tapdanceIndex: number;
   onBack: () => void;
 }) {
-  const keycodeConverter = useMemo(() => {
-    return new KeycodeConverter();
-  }, []);
   const [tapDance, setTapDance] = useState<{ [id: string]: TapDanceValue }>({});
 
   useEffect(() => {
     navigator.locks.request("load-tapdance", async () => {
+      if (props.tapdanceIndex < 0) return;
       const td = await props.via.GetTapDance(props.tapdanceIndex);
       const newTapDance = { ...tapDance };
       newTapDance[`${props.tapdanceIndex}`] = {
-        onTap: keycodeConverter.convertIntToKeycode(td.onTap),
-        onHold: keycodeConverter.convertIntToKeycode(td.onHold),
-        onDoubleTap: keycodeConverter.convertIntToKeycode(td.onDoubleTap),
-        onTapHold: keycodeConverter.convertIntToKeycode(td.onTapHold),
+        onTap: props.keycodeConverter.convertIntToKeycode(td.onTap),
+        onHold: props.keycodeConverter.convertIntToKeycode(td.onHold),
+        onDoubleTap: props.keycodeConverter.convertIntToKeycode(td.onDoubleTap),
+        onTapHold: props.keycodeConverter.convertIntToKeycode(td.onTapHold),
         tappingTerm: td.tappingTerm,
       };
       setTapDance(newTapDance);
     });
-  }, [props.tapdanceIndex]);
+  }, [props.tapdanceIndex, props.keycodeConverter]);
 
   return (
     <Box>
+      <Box>{`Edit TD${props.tapdanceIndex}`}</Box>
       <TapDanceEntry
         td={
           tapDance[props.tapdanceIndex] ?? {
@@ -42,17 +42,13 @@ export function TapDanceEditor(props: {
             tappingTerm: 200,
           }
         }
-        keycodeconverter={keycodeConverter}
+        keycodeconverter={props.keycodeConverter}
         onSave={(td: TapDanceValue) => {
           console.log(`Set TD${props.tapdanceIndex}`);
           console.log(td);
         }}
         onBack={props.onBack}
       ></TapDanceEntry>
-      <KeycodeCatalog
-        keycodeConverter={keycodeConverter}
-        tab={[{ label: "basic", keygroup: ["basic"] }]}
-      ></KeycodeCatalog>
     </Box>
   );
 }

@@ -24,6 +24,7 @@ import {
 import { KeycodeCatalog } from "./KeycodeCatalog";
 import { TapDanceEditor } from "./TapDanceEditor";
 import { match, P } from "ts-pattern";
+import { MacroEditor } from "./MacroEditor";
 
 export interface KeymapProperties {
   matrix: { rows: number; cols: number };
@@ -464,13 +465,15 @@ function KeymapLayer(props: {
 function LayerEditor(props: {
   keymap: KeymapProperties;
   via: ViaKeyboard;
+  layerCount: number;
+  keycodeConverter: KeycodeConverter;
   dynamicEntryCount: { tapdance: number };
   onTapdanceSelect?: (index: number) => void;
+  onMacroSelect?: (index: number) => void;
 }) {
   const [layoutOption, setLayoutOption] = useState<{
     [layout: number]: number;
   }>({ 0: 0 });
-  const [layerCount, setLayerCount] = useState(1);
   const [layer, setLayer] = useState(0);
   const [keymap, setKeymap] = useState<{ [layer: number]: number[] }>({});
 
@@ -478,8 +481,6 @@ function LayerEditor(props: {
     navigator.locks.request("load-layout", async () => {
       const layout = await props.via.GetLayoutOption();
       setLayoutOption({ 0: layout });
-      const layerCount = await props.via.GetLayerCount();
-      setLayerCount(layerCount);
       setLayer(0);
       if (!Object.keys(keymap).includes("0")) {
         const layerKeys = await props.via.GetLayer(0, {
@@ -489,15 +490,7 @@ function LayerEditor(props: {
         setKeymap({ ...keymap, 0: layerKeys });
       }
     });
-  }, [props.keymap, props.via, keymap]);
-
-  const keycodeConverter = useMemo(() => {
-    return new KeycodeConverter(
-      layerCount,
-      props.keymap.customKeycodes,
-      props.dynamicEntryCount.tapdance,
-    );
-  }, [layerCount, props.keymap.customKeycodes, props.dynamicEntryCount]);
+  }, [props.keymap, props.via]);
 
   return (
     <>
@@ -511,7 +504,7 @@ function LayerEditor(props: {
           }}
         />
         <LayerSelector
-          layerCount={layerCount}
+          layerCount={props.layerCount}
           onChange={async (layer) => {
             if (!Object.keys(keymap).includes(layer.toString())) {
               const layerKeys = await props.via.GetLayer(layer, {
@@ -532,13 +525,12 @@ function LayerEditor(props: {
             keymapProps={props.keymap}
             layoutOption={layoutOption}
             keymap={keymap[layer]}
-            keycodeconverter={keycodeConverter}
+            keycodeconverter={props.keycodeConverter}
             onKeycodeChange={(target, newKeycode) => {
               const offset = props.keymap.matrix.cols * target.matrix[0] + target.matrix[1];
               const newKeymap = { ...keymap };
               newKeymap[layer][offset] = newKeycode.value;
               setKeymap(newKeymap);
-              setLayer(layer);
               console.log(
                 `update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`,
               );
@@ -548,6 +540,71 @@ function LayerEditor(props: {
           <></>
         )}
       </div>
+    </>
+  );
+}
+
+export function KeymapEditor(props: {
+  keymap: KeymapProperties;
+  via: ViaKeyboard;
+  dynamicEntryCount: {
+    macro: number;
+    tapdance: number;
+    combo: number;
+    override: number;
+  };
+}) {
+  const [menuType, setMenuType] = useState<"layer" | "tapdance" | "macro">("layer");
+  const [layerCount, setLayerCount] = useState(1);
+  const [tdIndex, setTdIndex] = useState(-1);
+  const [macroIndex, setMacroIndex] = useState(-1);
+
+  useEffect(() => {
+    navigator.locks.request("load-layout", async () => {
+      const layerCount = await props.via.GetLayerCount();
+      setLayerCount(layerCount);
+    });
+  }, [props.via, props.keymap]);
+
+  const keycodeConverter = useMemo(() => {
+    return new KeycodeConverter(
+      layerCount,
+      props.keymap.customKeycodes,
+      props.dynamicEntryCount.macro,
+      props.dynamicEntryCount.tapdance,
+    );
+  }, [layerCount, props.keymap.customKeycodes, props.dynamicEntryCount]);
+
+  return (
+    <>
+      <Box hidden={menuType !== "layer"}>
+        <LayerEditor
+          {...props}
+          layerCount={layerCount}
+          keycodeConverter={keycodeConverter}
+        ></LayerEditor>
+      </Box>
+      <Box hidden={menuType !== "tapdance"}>
+        <TapDanceEditor
+          via={props.via}
+          keycodeConverter={keycodeConverter}
+          tapdanceIndex={tdIndex}
+          onBack={() => {
+            setMenuType("layer");
+          }}
+        ></TapDanceEditor>
+      </Box>
+      <Box hidden={menuType !== "macro"}>
+        <MacroEditor
+          via={props.via}
+          keycodeConverter={keycodeConverter}
+          macroIndex={macroIndex}
+          macroCount={props.dynamicEntryCount.macro}
+          onBack={() => {
+            setMenuType("layer");
+          }}
+        ></MacroEditor>
+      </Box>
       <KeycodeCatalog
         keycodeConverter={keycodeConverter}
         tab={[
@@ -559,44 +616,15 @@ function LayerEditor(props: {
           { label: "Macro", keygroup: ["macro"] },
           { label: "TapDance", keygroup: ["tapdance"] },
         ]}
-        onTapdanceSelect={props.onTapdanceSelect}
+        onTapdanceSelect={(index) => {
+          setMenuType("tapdance");
+          setTdIndex(index);
+        }}
+        onMacroSelect={(index) => {
+          setMenuType("macro");
+          setMacroIndex(index);
+        }}
       ></KeycodeCatalog>
-    </>
-  );
-}
-
-export function KeymapEditor(props: {
-  keymap: KeymapProperties;
-  via: ViaKeyboard;
-  dynamicEntryCount: {
-    tapdance: number;
-    combo: number;
-    override: number;
-  };
-}) {
-  const [menuType, setMenuType] = useState<"layer" | "tapdance">("layer");
-  const [tdIndex, setTdIndex] = useState(0);
-
-  return (
-    <>
-      <Box hidden={menuType !== "layer"}>
-        <LayerEditor
-          {...props}
-          onTapdanceSelect={(index) => {
-            setMenuType("tapdance");
-            setTdIndex(index);
-          }}
-        ></LayerEditor>
-      </Box>
-      <Box hidden={menuType !== "tapdance"}>
-        <TapDanceEditor
-          via={props.via}
-          tapdanceIndex={tdIndex}
-          onBack={() => {
-            setMenuType("layer");
-          }}
-        ></TapDanceEditor>
-      </Box>
     </>
   );
 }

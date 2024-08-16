@@ -33,6 +33,7 @@ const via = new ViaKeyboard();
 function App() {
   const [vialJson, setVialJson] = useState<any>(undefined);
   const [dynamicEntryCount, setDynamicEntryCount] = useState({
+    macro: 0,
     tapdance: 0,
     combo: 0,
     override: 0,
@@ -102,7 +103,8 @@ function App() {
     setKbName(parsed?.name ?? via.GetHidName());
 
     const dynamicEntryCount = await via.GetDynamicEntryCount();
-    setDynamicEntryCount(dynamicEntryCount);
+    const macroCount = await via.GetMacroCount();
+    setDynamicEntryCount({ macro: macroCount, ...dynamicEntryCount });
 
     const customValueId = (parsed.menus as MenuItemProperties[]).flatMap((top) =>
       top.content.reduce((prev: [string, number, number, number?][], section) => {

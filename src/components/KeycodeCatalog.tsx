@@ -1,6 +1,7 @@
 import { Box, Grid, Tab, Tabs, Tooltip } from "@mui/material";
 import { KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { useState } from "react";
+import { match, P } from "ts-pattern";
 
 const WIDTH_1U = 50;
 function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void }) {
@@ -56,7 +57,10 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void }) {
           setShowToolTip(false);
         }}
         onClick={() => {
-          props.onClick?.();
+          if (props.onClick) {
+            setShowToolTip(false);
+            props.onClick?.();
+          }
         }}
       >
         {props.keycode.label}
@@ -85,6 +89,7 @@ export function KeycodeCatalog(props: {
   keycodeConverter: KeycodeConverter;
   tab: { label: string; keygroup: string[] }[];
   onTapdanceSelect?: (index: number) => void;
+  onMacroSelect?: (index: number) => void;
 }) {
   const [tabValue, setTabValue] = useState(0);
   return (
@@ -120,17 +125,29 @@ export function KeycodeCatalog(props: {
                       .getTapKeycodeList()
                       .filter((k) => k.group === keygroup)
                       .map((keycode) => {
-                        return keycode.group === "tapdance" ? (
-                          <KeyListKey
-                            key={keycode.value}
-                            keycode={keycode}
-                            onClick={() => {
-                              props.onTapdanceSelect?.(keycode.value & 0x1f);
-                            }}
-                          ></KeyListKey>
-                        ) : (
-                          <KeyListKey key={keycode.value} keycode={keycode}></KeyListKey>
-                        );
+                        return match(keycode.group)
+                          .with("tapdance", () => (
+                            <KeyListKey
+                              key={keycode.value}
+                              keycode={keycode}
+                              onClick={() => {
+                                props.onTapdanceSelect?.(keycode.value & 0x1f);
+                              }}
+                            ></KeyListKey>
+                          ))
+                          .with("macro", () => (
+                            <KeyListKey
+                              key={keycode.value}
+                              keycode={keycode}
+                              onClick={() => {
+                                props.onMacroSelect?.(keycode.value & 0x1f);
+                              }}
+                            ></KeyListKey>
+                          ))
+                          .with(P._, () => (
+                            <KeyListKey key={keycode.value} keycode={keycode}></KeyListKey>
+                          ))
+                          .exhaustive();
                       })}
                   </Box>
                 </>

@@ -289,6 +289,59 @@ class VialKeyboard {
         };
   }
 
+  async GetMacroCount() {
+    const res = await this.Command([via_command_id.id_dynamic_keymap_macro_get_count]);
+    return res[1];
+  }
+
+  async GetMacroBufferLen() {
+    const res = await this.Command([via_command_id.id_dynamic_keymap_macro_get_buffer_size]);
+    return (res[1] << 8) | res[2];
+  }
+
+  async GetMacroBuffer(offset: number, length: number): Promise<number[]> {
+    const page_len = Math.ceil(length / 28);
+    const macro_buffer: number[][] = [];
+
+    await navigator.locks.request("vial-keyboard", async () => {
+      this.hid.setReceiveCallback((res) => {
+        console.log(res);
+        macro_buffer.push(Array.from(res.slice(4)));
+      });
+
+      for (let page = 0; page < page_len; page++) {
+        await this.hid.write(
+          Uint8Array.from([
+            via_command_id.id_dynamic_keymap_macro_get_buffer,
+            (offset + page * 28) >> 8,
+            (offset + page * 28) & 0xff,
+            28,
+          ]),
+        );
+      }
+
+      const timeout_max = 3000;
+      let timeout = timeout_max;
+      let current_len = macro_buffer.length;
+      while (macro_buffer.length < page_len) {
+        await this.sleep(50);
+        if (current_len != macro_buffer.length) {
+          current_len = macro_buffer.length;
+          timeout = timeout_max;
+        } else {
+          timeout -= 50;
+          if (timeout < 0) {
+            break;
+          }
+        }
+      }
+    });
+
+    this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+
+    return macro_buffer.flat();
+  }
+
   async GetCustomValue(id: number[]): Promise<number> {
     const res = await this.Command([
       via_command_id.id_unhandled,

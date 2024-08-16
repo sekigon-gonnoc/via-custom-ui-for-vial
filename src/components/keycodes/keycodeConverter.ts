@@ -54,71 +54,6 @@ function modString(mod: number) {
   return mod & 0x10 ? `${activeMod.join("+")}*` : `*${activeMod.join("+")}`;
 }
 
-function convertIntToKeycode(
-  value: number,
-  customKeycodes?: { name: string; title: string; shortName: string }[],
-): QmkKeycode {
-  if (
-    customKeycodes &&
-    value >= keycode_range.QK_KB.start &&
-    value - keycode_range.QK_KB.start < customKeycodes.length
-  ) {
-    const customKey = customKeycodes[value - keycode_range.QK_KB.start];
-    return { value: value, key: customKey.name, label: customKey.shortName };
-  } else if (Object.keys(keycodes).includes(value.toString())) {
-    const keycode = keycodes[value.toString()];
-    return {
-      ...keycode,
-      value: value,
-      label: keycode.label ?? keycode.aliases?.[0] ?? keycode.key,
-    };
-  } else {
-    return match(value)
-      .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
-        return {
-          value: val,
-          key: "mods",
-          modLabel: modString((val >> 8) & 0x1f),
-          label: convertIntToKeycode(val & 0xff).label,
-        };
-      })
-      .with(
-        P.number.between(keycode_range.QK_MOD_TAP.start, keycode_range.QK_MOD_TAP.end),
-        (val) => {
-          return {
-            value: val,
-            key: "modTap",
-            holdLabel: modString((val >> 8) & 0x1f),
-            tap: val & 0xff,
-            label: convertIntToKeycode(val & 0xff).label,
-          };
-        },
-      )
-      .with(
-        P.number.between(keycode_range.QK_LAYER_TAP.start, keycode_range.QK_LAYER_TAP.end),
-        (val) => {
-          return {
-            value: val,
-            key: "layerTap",
-            hold: val >> 8,
-            holdLabel: `Layer${(val >> 8) & 0xf}`,
-            tap: val & 0xff,
-            label: convertIntToKeycode(val & 0xff).label,
-          };
-        },
-      )
-      .with(P._, () => {
-        return {
-          group: "unknown",
-          key: `Any(${value.toString()})`,
-          label: `Any(${value.toString()})`,
-          value: value,
-        };
-      })
-      .exhaustive();
-  }
-}
-
 export class KeycodeConverter {
   private customKeycodes;
   private layer: number;
@@ -127,28 +62,33 @@ export class KeycodeConverter {
   constructor(
     layer: number = 16,
     customKeycodes?: { name: string; title: string; shortName: string }[],
+    macroCount: number = 0,
     tapDanceCount: number = 0,
   ) {
     this.customKeycodes = customKeycodes;
     this.layer = layer;
 
-    this.tapKeycodeList = Object.entries(keycodes).map((k) => {
-      const value = parseInt(k[0]);
-      if (
-        this.customKeycodes &&
-        value >= keycode_range.QK_KB.start &&
-        value - keycode_range.QK_KB.start < this.customKeycodes.length
-      ) {
-        const customKey = this.customKeycodes[value - keycode_range.QK_KB.start];
-        return { group: "custom", value: value, key: customKey.name, label: customKey.shortName };
-      } else {
-        return {
-          value: parseInt(k[0]),
-          ...k[1],
-          label: k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
-        };
-      }
-    });
+    this.tapKeycodeList = Object.entries(keycodes)
+      .filter(
+        (k) => k[1].group !== "macro" || parseInt(k[0]) - keycode_range.QK_MACRO.start < macroCount,
+      )
+      .map((k) => {
+        const value = parseInt(k[0]);
+        if (
+          this.customKeycodes &&
+          value >= keycode_range.QK_KB.start &&
+          value - keycode_range.QK_KB.start < this.customKeycodes.length
+        ) {
+          const customKey = this.customKeycodes[value - keycode_range.QK_KB.start];
+          return { group: "custom", value: value, key: customKey.name, label: customKey.shortName };
+        } else {
+          return {
+            value: parseInt(k[0]),
+            ...k[1],
+            label: k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
+          };
+        }
+      });
 
     if (tapDanceCount > 0) {
       this.tapKeycodeList.push(
@@ -258,6 +198,52 @@ export class KeycodeConverter {
   }
 
   public convertIntToKeycode(value: number): QmkKeycode {
-    return convertIntToKeycode(value, this.customKeycodes);
+    if (this.tapKeycodeList.map((k) => k.value).includes(value)) {
+      return this.tapKeycodeList.find((k) => k.value === value) ?? DefaultQmkKeycode;
+    } else {
+      return match(value)
+        .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
+          return {
+            value: val,
+            key: "mods",
+            modLabel: modString((val >> 8) & 0x1f),
+            label: this.convertIntToKeycode(val & 0xff).label,
+          };
+        })
+        .with(
+          P.number.between(keycode_range.QK_MOD_TAP.start, keycode_range.QK_MOD_TAP.end),
+          (val) => {
+            return {
+              value: val,
+              key: "modTap",
+              holdLabel: modString((val >> 8) & 0x1f),
+              tap: val & 0xff,
+              label: this.convertIntToKeycode(val & 0xff).label,
+            };
+          },
+        )
+        .with(
+          P.number.between(keycode_range.QK_LAYER_TAP.start, keycode_range.QK_LAYER_TAP.end),
+          (val) => {
+            return {
+              value: val,
+              key: "layerTap",
+              hold: val >> 8,
+              holdLabel: `Layer${(val >> 8) & 0xf}`,
+              tap: val & 0xff,
+              label: this.convertIntToKeycode(val & 0xff).label,
+            };
+          },
+        )
+        .with(P._, () => {
+          return {
+            group: "unknown",
+            key: `Any(${value.toString()})`,
+            label: `Any(${value.toString()})`,
+            value: value,
+          };
+        })
+        .exhaustive();
+    }
   }
 }
