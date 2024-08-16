@@ -12,7 +12,6 @@ import {
   Select,
   TextField,
 } from "@mui/material";
-import { match, P } from "ts-pattern";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -23,9 +22,10 @@ import {
   ModifierBit,
 } from "./keycodes/keycodeConverter";
 import { KeycodeCatalog } from "./KeycodeCatalog";
+import { TapDanceEditor } from "./TapDanceEditor";
+import { match, P } from "ts-pattern";
 
 export interface KeymapProperties {
-  via: ViaKeyboard;
   matrix: { rows: number; cols: number };
   layouts: {
     labels?: string[][];
@@ -41,11 +41,6 @@ export interface KeymapProperties {
           h?: number;
         }
     )[][];
-  };
-  dynamicEntryCount: {
-    tapdance: 0;
-    combo: 0;
-    override: 0;
   };
   customKeycodes?: { name: string; title: string; shortName: string }[];
 }
@@ -466,7 +461,12 @@ function KeymapLayer(props: {
   );
 }
 
-export function KeymapEditor(props: KeymapProperties) {
+function LayerEditor(props: {
+  keymap: KeymapProperties;
+  via: ViaKeyboard;
+  dynamicEntryCount: { tapdance: number };
+  onTapdanceSelect?: (index: number) => void;
+}) {
   const [layoutOption, setLayoutOption] = useState<{
     [layout: number]: number;
   }>({ 0: 0 });
@@ -483,24 +483,28 @@ export function KeymapEditor(props: KeymapProperties) {
       setLayer(0);
       if (!Object.keys(keymap).includes("0")) {
         const layerKeys = await props.via.GetLayer(0, {
-          row: props.matrix.rows,
-          col: props.matrix.cols,
+          row: props.keymap.matrix.rows,
+          col: props.keymap.matrix.cols,
         });
         setKeymap({ ...keymap, 0: layerKeys });
       }
     });
-  }, [props.layouts]);
+  }, [props.keymap, props.via, keymap]);
 
   const keycodeConverter = useMemo(() => {
-    return new KeycodeConverter(layerCount, props.customKeycodes, props.dynamicEntryCount.tapdance);
-  }, [layerCount, props.customKeycodes, props.dynamicEntryCount]);
+    return new KeycodeConverter(
+      layerCount,
+      props.keymap.customKeycodes,
+      props.dynamicEntryCount.tapdance,
+    );
+  }, [layerCount, props.keymap.customKeycodes, props.dynamicEntryCount]);
 
   return (
     <>
       <div>
         <LayoutSelector
           via={props.via}
-          layouts={props.layouts}
+          layouts={props.keymap.layouts}
           option={layoutOption}
           onChange={(option) => {
             setLayoutOption(option);
@@ -511,8 +515,8 @@ export function KeymapEditor(props: KeymapProperties) {
           onChange={async (layer) => {
             if (!Object.keys(keymap).includes(layer.toString())) {
               const layerKeys = await props.via.GetLayer(layer, {
-                row: props.matrix.rows,
-                col: props.matrix.cols,
+                row: props.keymap.matrix.rows,
+                col: props.keymap.matrix.cols,
               });
               const newKeymap = { ...keymap };
               newKeymap[layer] = layerKeys;
@@ -525,12 +529,12 @@ export function KeymapEditor(props: KeymapProperties) {
         ></LayerSelector>
         {Object.keys(keymap).includes(layer.toString()) ? (
           <KeymapLayer
-            keymapProps={props}
+            keymapProps={props.keymap}
             layoutOption={layoutOption}
             keymap={keymap[layer]}
             keycodeconverter={keycodeConverter}
             onKeycodeChange={(target, newKeycode) => {
-              const offset = props.matrix.cols * target.matrix[0] + target.matrix[1];
+              const offset = props.keymap.matrix.cols * target.matrix[0] + target.matrix[1];
               const newKeymap = { ...keymap };
               newKeymap[layer][offset] = newKeycode.value;
               setKeymap(newKeymap);
@@ -555,7 +559,44 @@ export function KeymapEditor(props: KeymapProperties) {
           { label: "Macro", keygroup: ["macro"] },
           { label: "TapDance", keygroup: ["tapdance"] },
         ]}
+        onTapdanceSelect={props.onTapdanceSelect}
       ></KeycodeCatalog>
+    </>
+  );
+}
+
+export function KeymapEditor(props: {
+  keymap: KeymapProperties;
+  via: ViaKeyboard;
+  dynamicEntryCount: {
+    tapdance: number;
+    combo: number;
+    override: number;
+  };
+}) {
+  const [menuType, setMenuType] = useState<"layer" | "tapdance">("layer");
+  const [tdIndex, setTdIndex] = useState(0);
+
+  return (
+    <>
+      <Box hidden={menuType !== "layer"}>
+        <LayerEditor
+          {...props}
+          onTapdanceSelect={(index) => {
+            setMenuType("tapdance");
+            setTdIndex(index);
+          }}
+        ></LayerEditor>
+      </Box>
+      <Box hidden={menuType !== "tapdance"}>
+        <TapDanceEditor
+          via={props.via}
+          tapdanceIndex={tdIndex}
+          onBack={() => {
+            setMenuType("layer");
+          }}
+        ></TapDanceEditor>
+      </Box>
     </>
   );
 }

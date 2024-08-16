@@ -2,22 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { KeycodeCatalog } from "./KeycodeCatalog";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
-import {
-  Box,
-  Button,
-  FormControl,
-  Grid,
-  MenuItem,
-  Select,
-  TextField,
-} from "@mui/material";
-import {
-  KeymapKeyPopUp,
-  WIDTH_1U,
-} from "./KeymapEditor";
+import { Box, Button, FormControl, Grid, MenuItem, Select, TextField } from "@mui/material";
+import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 
-export function TapDanceEditor(props: { via: ViaKeyboard; tapdanceCount: number }) {
-  const [tdIndex, setTdIndex] = useState("");
+export function TapDanceEditor(props: {
+  via: ViaKeyboard;
+  tapdanceIndex: number;
+  onBack: () => void;
+}) {
   const keycodeConverter = useMemo(() => {
     return new KeycodeConverter();
   }, []);
@@ -25,55 +17,38 @@ export function TapDanceEditor(props: { via: ViaKeyboard; tapdanceCount: number 
 
   useEffect(() => {
     navigator.locks.request("load-tapdance", async () => {
-      if (props.tapdanceCount > 0) {
-        setTdIndex("0");
-        const td = await props.via.GetTapDance(0);
-        const newTapDance = { ...tapDance };
-        newTapDance["0"] = {
-          onTap: keycodeConverter.convertIntToKeycode(td.onTap),
-          onHold: keycodeConverter.convertIntToKeycode(td.onHold),
-          onDoubleTap: keycodeConverter.convertIntToKeycode(td.onDoubleTap),
-          onTapHold: keycodeConverter.convertIntToKeycode(td.onTapHold),
-          tappingTerm: td.tappingTerm,
-        };
-        setTapDance(newTapDance);
-      }
+      const td = await props.via.GetTapDance(props.tapdanceIndex);
+      const newTapDance = { ...tapDance };
+      newTapDance[`${props.tapdanceIndex}`] = {
+        onTap: keycodeConverter.convertIntToKeycode(td.onTap),
+        onHold: keycodeConverter.convertIntToKeycode(td.onHold),
+        onDoubleTap: keycodeConverter.convertIntToKeycode(td.onDoubleTap),
+        onTapHold: keycodeConverter.convertIntToKeycode(td.onTapHold),
+        tappingTerm: td.tappingTerm,
+      };
+      setTapDance(newTapDance);
     });
-  }, [props.tapdanceCount]);
+  }, [props.tapdanceIndex]);
 
   return (
     <Box>
-      <TapDanceSelector
-        tapdanceCount={props.tapdanceCount}
-        index={tdIndex}
-        onChange={async (idx) => {
-          setTdIndex(idx);
-          if (tapDance[idx] === undefined) {
-            const td = await props.via.GetTapDance(parseInt(idx));
-            const newTapDance = { ...tapDance };
-            newTapDance[idx] = {
-              onTap: keycodeConverter.convertIntToKeycode(td.onTap),
-              onHold: keycodeConverter.convertIntToKeycode(td.onHold),
-              onDoubleTap: keycodeConverter.convertIntToKeycode(td.onDoubleTap),
-              onTapHold: keycodeConverter.convertIntToKeycode(td.onTapHold),
-              tappingTerm: td.tappingTerm,
-            };
-            setTapDance(newTapDance);
+      <TapDanceEntry
+        td={
+          tapDance[props.tapdanceIndex] ?? {
+            onTap: DefaultQmkKeycode,
+            onHold: DefaultQmkKeycode,
+            onDoubleTap: DefaultQmkKeycode,
+            onTapHold: DefaultQmkKeycode,
+            tappingTerm: 200,
           }
+        }
+        keycodeconverter={keycodeConverter}
+        onSave={(td: TapDanceValue) => {
+          console.log(`Set TD${props.tapdanceIndex}`);
+          console.log(td);
         }}
-      ></TapDanceSelector>
-      {tapDance[tdIndex] !== undefined ? (
-        <TapDanceEntry
-          td={tapDance[tdIndex]}
-          keycodeconverter={keycodeConverter}
-          onSave={(td: TapDanceValue) => {
-            console.log(`Set TD${tdIndex}`);
-            console.log(td);
-          }}
-        ></TapDanceEntry>
-      ) : (
-        <></>
-      )}
+        onBack={props.onBack}
+      ></TapDanceEntry>
       <KeycodeCatalog
         keycodeConverter={keycodeConverter}
         tab={[{ label: "basic", keygroup: ["basic"] }]}
@@ -88,30 +63,6 @@ interface TapDanceValue {
   onDoubleTap: QmkKeycode;
   onTapHold: QmkKeycode;
   tappingTerm: number;
-}
-
-function TapDanceSelector(props: {
-  tapdanceCount: number;
-  index: string;
-  onChange: (idx: string) => void;
-}) {
-  return (
-    <FormControl variant="standard">
-      <Select
-        value={props.index}
-        label="layout"
-        onChange={(event) => props.onChange(event.target.value)}
-      >
-        {[...Array(props.tapdanceCount)].map((_, idx) => {
-          return (
-            <MenuItem key={idx} value={`${idx}`}>
-              {`TD${idx}`}
-            </MenuItem>
-          );
-        })}
-      </Select>
-    </FormControl>
-  );
 }
 
 function TapDanceKey(props: {
@@ -143,6 +94,7 @@ function TapDanceEntry(props: {
   td: TapDanceValue;
   keycodeconverter: KeycodeConverter;
   onSave?: (td: TapDanceValue) => void;
+  onBack?: () => void;
 }) {
   const [tappingTerm, setTappingTerm] = useState(props.td.tappingTerm.toString());
   const [popupOpen, setpopupOpen] = useState(false);
@@ -164,6 +116,7 @@ function TapDanceEntry(props: {
 
   return (
     <>
+      <Box mt={2}></Box>
       <Grid container spacing={1}>
         {[
           {
@@ -228,7 +181,16 @@ function TapDanceEntry(props: {
             }}
           ></TextField>
         </Grid>
-        <Grid item xs={5}>
+        <Grid item xs={1}>
+          <Button
+            onClick={() => {
+              props.onBack?.();
+            }}
+          >
+            BACK
+          </Button>
+        </Grid>
+        <Grid item xs={4}>
           <Box sx={{ display: "flex", justifyContent: "right" }}>
             <Button onClick={() => setCandidateTapdance(props.td)}>Clear</Button>
           </Box>

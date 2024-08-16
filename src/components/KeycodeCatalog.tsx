@@ -3,7 +3,7 @@ import { KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { useState } from "react";
 
 const WIDTH_1U = 50;
-function KeyListKey(props: { keycode: QmkKeycode }) {
+function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void }) {
   const [isDragging, setIsDragging] = useState(false);
   const [showToolTip, setShowToolTip] = useState(false);
   return (
@@ -55,6 +55,9 @@ function KeyListKey(props: { keycode: QmkKeycode }) {
         onMouseLeave={(event) => {
           setShowToolTip(false);
         }}
+        onClick={() => {
+          props.onClick?.();
+        }}
       >
         {props.keycode.label}
       </Box>
@@ -81,6 +84,7 @@ function CustomTabPanel(props: TabPanelProps) {
 export function KeycodeCatalog(props: {
   keycodeConverter: KeycodeConverter;
   tab: { label: string; keygroup: string[] }[];
+  onTapdanceSelect?: (index: number) => void;
 }) {
   const [tabValue, setTabValue] = useState(0);
   return (
@@ -115,9 +119,19 @@ export function KeycodeCatalog(props: {
                     {props.keycodeConverter
                       .getTapKeycodeList()
                       .filter((k) => k.group === keygroup)
-                      .map((keycode) => (
-                        <KeyListKey key={keycode.value} keycode={keycode}></KeyListKey>
-                      ))}
+                      .map((keycode) => {
+                        return keycode.group === "tapdance" ? (
+                          <KeyListKey
+                            key={keycode.value}
+                            keycode={keycode}
+                            onClick={() => {
+                              props.onTapdanceSelect?.(keycode.value & 0x1f);
+                            }}
+                          ></KeyListKey>
+                        ) : (
+                          <KeyListKey key={keycode.value} keycode={keycode}></KeyListKey>
+                        );
+                      })}
                   </Box>
                 </>
               ) : (

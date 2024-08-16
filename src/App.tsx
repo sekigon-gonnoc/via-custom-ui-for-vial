@@ -211,13 +211,6 @@ function App() {
                 >
                   <ListItemText primary="Keymap" />
                 </ListItemButton>
-                <ListItemButton
-                  onClick={() => {
-                    setActiveMenu({ menuType: "tapdance" });
-                  }}
-                >
-                  <ListItemText primary="Tap Dance" />
-                </ListItemButton>
               </List>
             </div>
             <Divider />
@@ -330,16 +323,10 @@ function App() {
             <>
               <div hidden={activeMenu?.menuType !== "keymap"}>
                 <KeymapEditor
-                  {...vialJson!}
+                  keymap={vialJson!}
                   via={via}
                   dynamicEntryCount={dynamicEntryCount}
                 ></KeymapEditor>
-              </div>
-              <div hidden={activeMenu?.menuType !== "tapdance" || dynamicEntryCount.tapdance === 0}>
-                <TapDanceEditor
-                  via={via}
-                  tapdanceCount={dynamicEntryCount.tapdance}
-                ></TapDanceEditor>
               </div>
             </>
           )}
