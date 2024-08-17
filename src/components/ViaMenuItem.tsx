@@ -25,7 +25,7 @@ type ToggleElement = {
   label: string;
   options?: [number, number];
   content: [string, number, number, number?];
-  value: number;
+  value?: number;
   onChange: (value: number) => void;
 };
 
@@ -317,7 +317,7 @@ function MenuElement(props: MenuSectionProperties, elem: MenuElementProperties) 
           <ViaToggle
             key={`${props.label}-${elem.label}`}
             {...elem}
-            value={props.customValues[elem.content[0]]}
+            value={props.customValues[elem.content[0]] ?? 0}
             onChange={(value) => props.onChange(elem.content, value)}
           />
         );
@@ -326,7 +326,7 @@ function MenuElement(props: MenuSectionProperties, elem: MenuElementProperties) 
           <ViaRange
             key={`${props.label}-${elem.label}`}
             {...elem}
-            value={props.customValues[elem.content[0]]}
+            value={props.customValues[elem.content[0]] ?? 0}
             onChange={(value) => props.onChange(elem.content, value)}
           />
         );
@@ -335,7 +335,7 @@ function MenuElement(props: MenuSectionProperties, elem: MenuElementProperties) 
           <ViaDropDown
             key={`${props.label}-${elem.label}`}
             {...elem}
-            value={props.customValues[elem.content[0]]}
+            value={props.customValues[elem.content[0]] ?? 0}
             onChange={(value) => props.onChange(elem.content, value)}
           />
         );
@@ -344,7 +344,7 @@ function MenuElement(props: MenuSectionProperties, elem: MenuElementProperties) 
           <ViaColor
             key={`${props.label}-${elem.label}`}
             {...elem}
-            value={props.customValues[elem.content[0]]}
+            value={props.customValues[elem.content[0]] ?? 0}
             onChange={(value) => props.onChange(elem.content, value)}
           />
         );
@@ -353,7 +353,7 @@ function MenuElement(props: MenuSectionProperties, elem: MenuElementProperties) 
           <ViaButton
             key={`${props.label}-${elem.label}`}
             {...elem}
-            value={props.customValues[elem.content[0]]}
+            value={props.customValues[elem.content[0]] ?? 0}
             onChange={(value) => props.onChange(elem.content, value)}
           />
         );
@@ -362,7 +362,7 @@ function MenuElement(props: MenuSectionProperties, elem: MenuElementProperties) 
           <ViaMultipleCheckbox
             key={`${props.label}-${elem.label}`}
             {...elem}
-            value={props.customValues[elem.content[0]]}
+            value={props.customValues[elem.content[0]] ?? 0}
             onChange={(value) => props.onChange(elem.content, value)}
           />
         );

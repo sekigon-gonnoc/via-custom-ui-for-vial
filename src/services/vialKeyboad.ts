@@ -378,6 +378,22 @@ class VialKeyboard {
     };
   }
 
+  async GetQuantumSettingsValue(id: number[]): Promise<{ [id: number]: number }> {
+    const values: { [id: number]: number } = {};
+
+    for (const v of id) {
+      const res = await this.Command([
+        via_command_id.id_vial,
+        vial_command_id.vial_qmk_settings_get,
+        v & 0xff,
+        (v >> 8) & 0xff,
+      ]);
+      values[v] = res[1] | (res[2] << 8) | (res[3] << 16) | (res[4] << 24);
+    }
+
+    return values;
+  }
+
   async GetCustomValue(id: number[]): Promise<number> {
     const res = await this.Command([
       via_command_id.id_unhandled,

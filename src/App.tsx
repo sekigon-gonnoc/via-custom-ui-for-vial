@@ -23,6 +23,10 @@ import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
 import { match, P } from "ts-pattern";
 import { act } from "react-dom/test-utils";
 import { TapDanceEditor } from "./components/TapDanceEditor";
+import {
+  QuantumSettingsEditor,
+  QuantumSettingsSaveButton,
+} from "./components/QuantumSettingsEditor";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");
@@ -49,7 +53,7 @@ function App() {
         menu: KeymapProperties;
       }
     | {
-        menuType: "tapdance";
+        menuType: "quantum";
       }
   >();
   const [customValues, setCustomValues] = useState<{ [id: string]: number }>({});
@@ -58,6 +62,7 @@ function App() {
   const [kbName, setKbName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [quantumValues, setQuantumValues] = useState<{ [id: string]: number }>({});
 
   useEffect(() => {
     // load wasm
@@ -216,6 +221,29 @@ function App() {
               </List>
             </div>
             <Divider />
+            <div style={{ display: connected ? "block" : "none" }}>
+              <ListSubheader>Quantum settings</ListSubheader>
+              <List disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    setActiveMenu({ menuType: "quantum" });
+                  }}
+                >
+                  <ListItemText primary="Quantum" />
+                </ListItemButton>
+
+                <Grid container rowSpacing={1} columnSpacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <QuantumSettingsSaveButton
+                      via={via}
+                      value={quantumValues}
+                      connected={connected}
+                    ></QuantumSettingsSaveButton>
+                  </Grid>
+                </Grid>
+              </List>
+            </div>
+            <Divider />
             {customMenus.map((top) => (
               <Box key={top.label}>
                 <ListSubheader> {top.label}</ListSubheader>
@@ -317,6 +345,16 @@ function App() {
                 }}
               ></ViaMenuItem>
             ))
+            .with({ menuType: "quantum" }, () => {
+              return (
+                <QuantumSettingsEditor
+                  via={via}
+                  onChange={(value) => {
+                    setQuantumValues(value);
+                  }}
+                ></QuantumSettingsEditor>
+              );
+            })
             .with(P._, () => <></>)
             .exhaustive()}
           {vialJson === undefined ? (
