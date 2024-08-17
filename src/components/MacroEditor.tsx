@@ -192,7 +192,7 @@ function MacroEntry(props: {
     <>
       {actions.map((action, idx) => {
         return (
-          <Stack direction={"row"} mt={1}>
+          <Stack key={idx} direction={"row"} mt={1}>
             <IconButton onClick={() => setActions(actions.filter((_, id) => id !== idx))}>
               <Delete></Delete>
             </IconButton>

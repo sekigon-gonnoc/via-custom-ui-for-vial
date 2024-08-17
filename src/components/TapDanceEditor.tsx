@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { KeycodeCatalog } from "./KeycodeCatalog";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
@@ -133,13 +133,13 @@ function TapDanceEntry(props: {
           },
         ].map((k, idx) => {
           return (
-            <>
-              <Grid item xs={5} key={`label-${idx}`}>
+            <Fragment key={idx}>
+              <Grid item xs={5}>
                 <Box alignContent={"center"} textAlign={"right"} height={"100%"}>
                   {k.label}
                 </Box>
               </Grid>
-              <Grid item xs={7} key={`item-${idx}`}>
+              <Grid item xs={7}>
                 <TapDanceKey
                   keycode={k.key}
                   onClick={(target) => {
@@ -151,7 +151,7 @@ function TapDanceEntry(props: {
                   onKeycodeChange={handleChange[idx]}
                 ></TapDanceKey>
               </Grid>
-            </>
+            </Fragment>
           );
         })}
         <Grid item xs={5}>

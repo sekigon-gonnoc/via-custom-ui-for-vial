@@ -1,7 +1,7 @@
 import { Box, Button, Grid } from "@mui/material";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 
 export function ComboEditor(props: {
@@ -87,13 +87,13 @@ function ComboEntry(props: {
       <Grid container spacing={1}>
         {candidateCombo.keys.map((k, idx) => {
           return (
-            <>
-              <Grid item xs={5} key={`label-${idx}`}>
+            <Fragment key={idx}>
+              <Grid item xs={5}>
                 <Box alignContent={"center"} textAlign={"right"} height={"100%"}>
                   {["key 1", "key 2", "key 3", "key 4", "output key"][idx]}
                 </Box>
               </Grid>
-              <Grid item xs={7} key={`item-${idx}`}>
+              <Grid item xs={7}>
                 <ComboKey
                   keycode={k}
                   onClick={(target) => {
@@ -109,7 +109,7 @@ function ComboEntry(props: {
                   }}
                 ></ComboKey>
               </Grid>
-            </>
+            </Fragment>
           );
         })}
         <Grid item xs={1}>

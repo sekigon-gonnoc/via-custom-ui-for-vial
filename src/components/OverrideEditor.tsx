@@ -1,7 +1,7 @@
 import { Box, Button, Checkbox, FormControlLabel, FormGroup, Grid, Switch } from "@mui/material";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 
 export function OverrideEditor(props: {
@@ -131,13 +131,13 @@ function OverrideEntry(props: {
 
         {[candidateOverride.trigger, candidateOverride.replacement].map((k, idx) => {
           return (
-            <>
-              <Grid item xs={5} key={`label-${idx}`}>
+            <Fragment key={idx}>
+              <Grid item xs={5}>
                 <Box alignContent={"center"} textAlign={"right"} height={"100%"}>
                   {["Trigger", "Override"][idx]}
                 </Box>
               </Grid>
-              <Grid item xs={7} key={`item-${idx}`}>
+              <Grid item xs={7}>
                 <OverrideKey
                   keycode={k}
                   onClick={(target) => {
@@ -155,7 +155,7 @@ function OverrideEntry(props: {
                   }}
                 ></OverrideKey>
               </Grid>
-            </>
+            </Fragment>
           );
         })}
 
