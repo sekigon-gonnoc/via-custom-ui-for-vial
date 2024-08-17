@@ -1,0 +1,12 @@
+
+{
+  "1": {
+    "group": "internal",
+    "key": "KC_TRANSPARENT",
+    "label": "▽",
+    "aliases": [
+      "_______",
+      "KC_TRNS"
+    ]
+  }
+}

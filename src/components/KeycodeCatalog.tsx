@@ -137,7 +137,7 @@ export function KeycodeCatalog(props: {
                           .with("tapdance", () => (
                             <KeyListKey
                               key={keycode.value}
-                              keycode={keycode}
+                              keycode={{ ...keycode, label: keycode.label + " 🖊" }}
                               draggable={true}
                               onClick={() => {
                                 props.onTapdanceSelect?.(keycode.value & 0x1f);
@@ -147,7 +147,7 @@ export function KeycodeCatalog(props: {
                           .with("macro", () => (
                             <KeyListKey
                               key={keycode.value}
-                              keycode={keycode}
+                              keycode={{ ...keycode, label: keycode.label + " 🖊" }}
                               draggable={true}
                               onClick={() => {
                                 props.onMacroSelect?.(keycode.value & 0x1f);
@@ -180,7 +180,7 @@ export function KeycodeCatalog(props: {
                         key={`combo-${idx}`}
                         keycode={{
                           ...DefaultQmkKeycode,
-                          label: `Combo ${idx}`,
+                          label: `Combo ${idx} 🖊`,
                           key: `Edit Combo`,
                           value: idx,
                         }}
@@ -207,7 +207,7 @@ export function KeycodeCatalog(props: {
                         key={`override-${idx}`}
                         keycode={{
                           ...DefaultQmkKeycode,
-                          label: `Override ${idx}`,
+                          label: `Override ${idx} 🖊`,
                           key: `Edit override`,
                           value: idx,
                         }}

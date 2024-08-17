@@ -15,20 +15,20 @@
   }
 
   .mod-legend {
-    font-size: 10px;
+    font-size: 11px;
     text-align: center;
     height: 100%;
   }
 
   .main-legend {
-    font-size: 12px;
+    font-size: 14px;
     text-align: center;
     align-items: center;
     height: 100%;
   }
 
   .hold-legend {
-    font-size: 10px;
+    font-size: 11px;
     text-align: center;
     height: 100%;
   }
@@ -49,11 +49,21 @@
   user-select: none;
 }
 
+.key-select-popup {
+  width: 400px;
+  border: solid;
+  border-width: 1px;
+  padding: 8px;
+  background-color: white;
+}
+
 .list-label {
+  width: 200px;
   align-items: start;
 }
 
 .list-key {
+  width: 200px;
   align-items: end;
   font-size: smaller;
 }

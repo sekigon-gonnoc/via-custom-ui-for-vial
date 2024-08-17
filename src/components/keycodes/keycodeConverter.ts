@@ -1,10 +1,11 @@
 import { match, P } from "ts-pattern";
 import keycodes_0_0_3 from "./0.0.3/keycodes.json";
+import keycode_override_0_0_3 from "./0.0.3/keycode_override.json";
 import quantum_keycode_range_0_0_3 from "./0.0.3/quantum_keycode_range.json";
 
 const keycodes: {
   [val: string]: { group: string; key: string; label?: string; aliases?: string[] };
-} = keycodes_0_0_3;
+} = { ...keycodes_0_0_3, ...keycode_override_0_0_3 };
 const keycode_range: { [range: string]: { start: number; end: number } } =
   quantum_keycode_range_0_0_3;
 
@@ -37,7 +38,7 @@ export const DefaultQmkKeycode: QmkKeycode = {
 };
 
 const ModTapKeycodeBase: QmkKeycode = {
-  label: "Mod Tap",
+  label: " Mod Tap",
   value: keycode_range.QK_MOD_TAP.start,
   key: "MOD_TAP(kc)",
 };

@@ -101,13 +101,13 @@ export function EditableKey(props: {
       onClick={(event) => props.onClick?.(event.currentTarget)}
     >
       <Grid container direction={"column"} className="legend-container">
-        <Grid item xs={4}>
+        <Grid item xs={3.5}>
           <div className="mod-legend">{props.keycode.modLabel ?? ""}</div>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={5}>
           <div className="main-legend">{props.keycode.label}</div>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3.5}>
           <div className="hold-legend">{props.keycode.holdLabel ?? ""}</div>
         </Grid>
       </Grid>
@@ -156,13 +156,13 @@ export function KeymapKey(props: KeymapKeyProperties) {
       onClick={(event) => props.onClick?.(event.currentTarget)}
     >
       <Grid container direction={"column"} className="legend-container">
-        <Grid item xs={4}>
+        <Grid item xs={3.5}>
           <div className="mod-legend">{props.keycode.modLabel ?? ""}</div>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={5}>
           <div className="main-legend">{props.keycode.label}</div>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3.5}>
           <div className="hold-legend">{props.keycode.holdLabel ?? ""}</div>
         </Grid>
       </Grid>
@@ -214,7 +214,7 @@ export function KeymapKeyPopUp(props: {
       onClickAway={() => props.onClickAway?.()}
     >
       <Popper open={props.open} anchorEl={props.anchor} placement="bottom-start">
-        <Box width={400} border={1} p={1} bgcolor="white">
+        <div className="key-select-popup">
           <Autocomplete
             value={tapValue}
             filterOptions={filterOptions}
@@ -347,7 +347,7 @@ export function KeymapKeyPopUp(props: {
               }
             }}
           ></TextField>
-        </Box>
+        </div>
       </Popper>
     </ClickAwayListener>
   );
@@ -739,7 +739,7 @@ export function KeymapEditor(props: {
       <KeycodeCatalog
         keycodeConverter={keycodeConverter}
         tab={[
-          { label: "Basic", keygroup: ["basic", "modifiers"] },
+          { label: "Basic", keygroup: ["internal", "basic", "modifiers"] },
           { label: "Mouse", keygroup: ["mouse"] },
           { label: "User/Wireless", keygroup: ["custom", "kb", "user"] },
           { label: "Media", keygroup: ["media"] },
