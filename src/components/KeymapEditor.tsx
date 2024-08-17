@@ -503,19 +503,19 @@ function KeymapLayer(props: {
           height: `${(Math.max(...keymapkeys.map((k) => k.y)) + 2) * WIDTH_1U}px`,
         }}
       >
-        {keymapkeys.map((p, idx) =>
-          KeymapKey({
-            ...p,
-            onKeycodeChange: props.onKeycodeChange,
-            onClick: (target) => {
+        {keymapkeys.map((p, idx) => (
+          <KeymapKey
+            {...p}
+            onKeycodeChange={props.onKeycodeChange}
+            onClick={(target) => {
               setCandidateKeycode(p.keycode);
               setFocusedKey(p);
               setpopupOpen(true);
               setAnchorEl(target);
-            },
-            reactKey: idx.toString(),
-          }),
-        )}
+            }}
+            reactKey={idx.toString()}
+          />
+        ))}
       </div>
       <KeymapKeyPopUp
         open={popupOpen}
@@ -581,8 +581,12 @@ function LayerEditor(props: {
     });
   }, [props.keymap, props.via]);
 
-  const setKeycode = async (layer: number, row: number, col: number, keycode: number) => {
+  const sendKeycode = async (layer: number, row: number, col: number, keycode: number) => {
     await props.via.SetKeycode(layer, row, col, keycode);
+  };
+
+  const sendLayout = async (layout: number) => {
+    await props.via.SetLayoutOption(layout);
   };
 
   return (
@@ -594,6 +598,7 @@ function LayerEditor(props: {
           option={layoutOption}
           onChange={(option) => {
             setLayoutOption(option);
+            sendLayout(option[0]);
           }}
         />
         <LayerSelector
@@ -639,7 +644,7 @@ function LayerEditor(props: {
                 const newKeymap = { ...keymap };
                 newKeymap[layer][offset] = newKeycode.value;
                 setKeymap(newKeymap);
-                setKeycode(layer, target.matrix[0], target.matrix[1], newKeycode.value);
+                sendKeycode(layer, target.matrix[0], target.matrix[1], newKeycode.value);
                 console.log(
                   `update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`,
                 );

@@ -170,6 +170,18 @@ class VialKeyboard {
     return res ? res[5] | (res[4] << 8) | (res[3] << 16) | (res[2] << 24) : 0;
   }
 
+  async SetLayoutOption(layout: number) {
+    const res = await this.Command([
+      via_command_id.id_set_keyboard_value,
+      via_keyboard_value_id.id_layout_options,
+      (layout >> 24) & 0xff,
+      (layout >> 16) & 0xff,
+      (layout >> 8) & 0xff,
+      layout & 0xff,
+    ]);
+    return res ? res[5] | (res[4] << 8) | (res[3] << 16) | (res[2] << 24) : 0;
+  }
+
   async GetVialKeyboardId() {
     const res = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_keyboard_id]);
     return res?.slice(0, 4);
