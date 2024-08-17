@@ -29,6 +29,17 @@ export function TapDanceEditor(props: {
     });
   }, [props.tapdanceIndex, props.keycodeConverter]);
 
+  const sendTapdance = (id: number, value: TapDanceValue) => {
+    props.via.SetTapDance({
+      id: id,
+      onTap: value.onTap.value,
+      onHold: value.onHold.value,
+      onDoubleTap: value.onDoubleTap.value,
+      onTapHold: value.onTapHold.value,
+      tappingTerm: value.tappingTerm,
+    });
+  };
+
   return (
     <Box>
       <Box>{`Edit TD${props.tapdanceIndex}`}</Box>
@@ -46,6 +57,7 @@ export function TapDanceEditor(props: {
         onSave={(td: TapDanceValue) => {
           console.log(`Set TD${props.tapdanceIndex}`);
           console.log(td);
+          sendTapdance(props.tapdanceIndex, td);
         }}
         onBack={props.onBack}
       ></TapDanceEntry>
@@ -83,6 +95,7 @@ function TapDanceEntry(props: {
 
   useEffect(() => {
     setCandidateTapdance(props.td);
+    setTappingTerm(props.td.tappingTerm.toString());
   }, [props.td]);
 
   return (

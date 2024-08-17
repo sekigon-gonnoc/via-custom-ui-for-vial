@@ -320,6 +320,32 @@ class VialKeyboard {
         };
   }
 
+  async SetTapDance(value: {
+    id: number;
+    onTap: number;
+    onHold: number;
+    onDoubleTap: number;
+    onTapHold: number;
+    tappingTerm: number;
+  }) {
+    this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_dynamic_entry_op,
+      dynamic_vial_id.dynamic_vial_tap_dance_set,
+      value.id & 0xff,
+      value.onTap & 0xff,
+      (value.onTap >> 8) & 0xff,
+      value.onHold & 0xff,
+      (value.onHold >> 8) & 0xff,
+      value.onDoubleTap & 0xff,
+      (value.onDoubleTap >> 8) & 0xff,
+      value.onTapHold & 0xff,
+      (value.onTapHold >> 8) & 0xff,
+      value.tappingTerm & 0xff,
+      (value.tappingTerm >> 8) & 0xff,
+    ]);
+  }
+
   async GetMacroCount() {
     const res = await this.Command([via_command_id.id_dynamic_keymap_macro_get_count]);
     return res[1];
