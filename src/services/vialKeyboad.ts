@@ -128,6 +128,35 @@ class VialKeyboard {
     });
   }
 
+  async BatchCommand(messages: number[][], timeoutMs: number = 3000): Promise<Uint8Array[]> {
+    return await navigator.locks.request("vial-keyboard", async () => {
+      const commandCount = messages.length;
+      const res: Uint8Array[] = [];
+      this.hid.setReceiveCallback((msg) => res.push(msg));
+
+      messages.forEach(async (msg) => await this.hid.write(Uint8Array.from(msg)));
+
+      let timeout = timeoutMs;
+      let currentLen = res.length;
+      while (res.length < commandCount) {
+        await this.sleep(10);
+        if (currentLen != res.length) {
+          currentLen = res.length;
+          timeout = timeoutMs;
+        } else {
+          timeout -= 10;
+          if (timeout < 0) {
+            break;
+          }
+        }
+      }
+
+      this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+
+      return res;
+    });
+  }
+
   async GetProtocolVersion() {
     const res = await this.Command([via_command_id.id_get_protocol_version]);
     return res ? res[2] | (res[3] << 8) : 0;
@@ -150,41 +179,20 @@ class VialKeyboard {
     const res_size = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_size]);
     const size = res_size[0] + (res_size[1] << 8) + (res_size[2] << 16) + (res_size[3] << 24);
 
-    const page_len = Math.floor((size + VIAL_PAGE_SIZE - 1) / VIAL_PAGE_SIZE);
-    const vial_def: number[][] = [];
-
-    await navigator.locks.request("vial-keyboard", async () => {
-      this.hid.setReceiveCallback((res) => {
-        console.log(res);
-        vial_def.push(Array.from(res));
-      });
-
-      for (let page = 0; page < page_len; page++) {
-        await this.hid.write(
-          Uint8Array.from([via_command_id.id_vial, vial_command_id.vial_get_def, page]),
-        );
-      }
-
-      const timeout_max = 3000;
-      let timeout = timeout_max;
-      let current_len = vial_def.length;
-      while (vial_def.length < page_len) {
-        await this.sleep(50);
-        if (current_len != vial_def.length) {
-          current_len = vial_def.length;
-          timeout = timeout_max;
-        } else {
-          timeout -= 50;
-          if (timeout < 0) {
-            break;
-          }
-        }
-      }
-
-      this.hid.setReceiveCallback(this.receiveCallback.bind(this));
-    });
-
-    return Uint8Array.from(vial_def.flat()).slice(0, size);
+    const pageLen = Math.ceil(size / VIAL_PAGE_SIZE);
+    const vialDef = await this.BatchCommand(
+      [...Array(pageLen)].map((_, idx) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_get_def,
+        idx,
+      ]),
+    );
+    return Uint8Array.from(
+      vialDef
+        .map((v) => Array.from(v))
+        .flat()
+        .slice(0, size),
+    );
   }
 
   async GetLayerCount() {
@@ -199,56 +207,29 @@ class VialKeyboard {
     const matrix_len = matrix_definition.row * matrix_definition.col * 2; // 2byte per key
     const start = layer * matrix_len;
 
-    const page_len = Math.ceil(matrix_len / 28);
-    const keymap_buffer: number[][] = [];
+    const pageLen = 28;
+    const pageCount = Math.ceil(matrix_len / pageLen);
+    const keymap_buffer = await this.BatchCommand(
+      [...Array(pageCount)].map((_, idx) => [
+        via_command_id.id_dynamic_keymap_get_buffer,
+        (start + idx * pageLen) >> 8,
+        (start + idx * pageLen) & 0xff,
+        pageLen,
+      ]),
+    );
 
-    await navigator.locks.request("vial-keyboard", async () => {
-      this.hid.setReceiveCallback((res) => {
-        console.log(res);
-        keymap_buffer.push(Array.from(res.slice(4)));
-      });
-
-      for (let page = 0; page < page_len; page++) {
-        await this.hid.write(
-          Uint8Array.from([
-            via_command_id.id_dynamic_keymap_get_buffer,
-            (start + page * 28) >> 8,
-            (start + page * 28) & 0xff,
-            28,
-          ]),
-        );
-      }
-
-      const timeout_max = 3000;
-      let timeout = timeout_max;
-      let current_len = keymap_buffer.length;
-      while (keymap_buffer.length < page_len) {
-        await this.sleep(50);
-        if (current_len != keymap_buffer.length) {
-          current_len = keymap_buffer.length;
-          timeout = timeout_max;
+    return keymap_buffer
+      .map((b) => Array.from(b.slice(4)))
+      .flat()
+      .reduce((p: number[], c, i) => {
+        if (i & 1) {
+          const b = p.pop();
+          p.push((b! << 8) | c);
         } else {
-          timeout -= 50;
-          if (timeout < 0) {
-            break;
-          }
+          p.push(c);
         }
-      }
-
-      this.hid.setReceiveCallback(this.receiveCallback.bind(this));
-    });
-
-    console.log(keymap_buffer);
-
-    return keymap_buffer.flat().reduce((p: number[], c, i) => {
-      if (i & 1) {
-        const b = p.pop();
-        p.push((b! << 8) | c);
-      } else {
-        p.push(c);
-      }
-      return p;
-    }, []);
+        return p;
+      }, []);
   }
 
   async GetEncoder(layer: number, count: number): Promise<number[][]> {
@@ -316,45 +297,16 @@ class VialKeyboard {
 
   async GetMacroBuffer(offset: number, length: number): Promise<number[]> {
     const page_len = Math.ceil(length / 28);
-    const macro_buffer: number[][] = [];
+    const macro_buffer = await this.BatchCommand(
+      [...Array(page_len)].map((_, page) => [
+        via_command_id.id_dynamic_keymap_macro_get_buffer,
+        (offset + page * 28) >> 8,
+        (offset + page * 28) & 0xff,
+        28,
+      ]),
+    );
 
-    await navigator.locks.request("vial-keyboard", async () => {
-      this.hid.setReceiveCallback((res) => {
-        console.log(res);
-        macro_buffer.push(Array.from(res.slice(4)));
-      });
-
-      for (let page = 0; page < page_len; page++) {
-        await this.hid.write(
-          Uint8Array.from([
-            via_command_id.id_dynamic_keymap_macro_get_buffer,
-            (offset + page * 28) >> 8,
-            (offset + page * 28) & 0xff,
-            28,
-          ]),
-        );
-      }
-
-      const timeout_max = 3000;
-      let timeout = timeout_max;
-      let current_len = macro_buffer.length;
-      while (macro_buffer.length < page_len) {
-        await this.sleep(50);
-        if (current_len != macro_buffer.length) {
-          current_len = macro_buffer.length;
-          timeout = timeout_max;
-        } else {
-          timeout -= 50;
-          if (timeout < 0) {
-            break;
-          }
-        }
-      }
-    });
-
-    this.hid.setReceiveCallback(this.receiveCallback.bind(this));
-
-    return macro_buffer.flat();
+    return macro_buffer.map((b) => Array.from(b.slice(4))).flat();
   }
 
   async GetCombo(id: number) {
@@ -394,37 +346,37 @@ class VialKeyboard {
   }
 
   async GetQuantumSettingsValue(id: number[]): Promise<{ [id: number]: number }> {
-    const values: { [id: number]: number } = {};
-
-    for (const v of id) {
-      const res = await this.Command([
+    const values = await this.BatchCommand(
+      id.map((v) => [
         via_command_id.id_vial,
         vial_command_id.vial_qmk_settings_get,
         v & 0xff,
         (v >> 8) & 0xff,
-      ]);
-      values[v] = res[1] | (res[2] << 8) | (res[3] << 16) | (res[4] << 24);
-    }
+      ]),
+    );
 
-    return values;
+    return values.reduce((acc, res, idx) => {
+      return { ...acc, [id[idx]]: res[1] | (res[2] << 8) | (res[3] << 16) | (res[4] << 24) };
+    }, {});
   }
 
   async EraseQuantumSettingsValue() {
     await this.Command([via_command_id.id_vial, vial_command_id.vial_qmk_settings_reset]);
   }
 
-  async GetCustomValue(id: number[]): Promise<number> {
-    const res = await this.Command([
-      via_command_id.id_unhandled,
-      via_command_id.id_custom_get_value,
-      ...id,
-    ]);
-    return (
-      res[2 + id.length] |
-      (res[3 + id.length] << 8) |
-      (res[4 + id.length] << 16) |
-      (res[5 + id.length] << 24)
+  async GetCustomValue(id: number[][]): Promise<number[]> {
+    const buffers = await this.BatchCommand(
+      id.map((id) => [via_command_id.id_unhandled, via_command_id.id_custom_get_value, ...id]),
     );
+
+    const customValues = buffers.map(
+      (res, idx) =>
+        res[2 + id[idx].length] |
+        (res[3 + id[idx].length] << 8) |
+        (res[4 + id[idx].length] << 16) |
+        (res[5 + id[idx].length] << 24),
+    );
+    return customValues;
   }
 
   async SetCustomValue(id: number[], value: number): Promise<void> {

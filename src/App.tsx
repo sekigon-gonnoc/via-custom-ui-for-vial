@@ -70,10 +70,10 @@ function App() {
   }, []);
 
   const getCustomValues = async (_customValueId: typeof customValueId) => {
-    const customValues: { [id: string]: number } = {};
-    for (const element of _customValueId) {
-      customValues[element[0]] = await via.GetCustomValue(element.slice(1) as number[]);
-    }
+    const buffer = await via.GetCustomValue(_customValueId.map((v) => v.slice(1) as number[]));
+    const customValues: { [id: string]: number } = buffer.reduce((acc, value, idx) => {
+      return { ...acc, [_customValueId[idx][0]]: value };
+    }, {});
     setCustomValues(customValues);
     console.log(customValues);
   };

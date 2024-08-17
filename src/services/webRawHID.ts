@@ -81,6 +81,7 @@ class WebRawHID implements WebUsbComInterface {
       await this.port?.sendReport(this.reportId, msg);
     } catch (e) {
       console.error(e);
+      throw e;
     }
   }
 
