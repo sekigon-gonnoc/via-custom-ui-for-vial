@@ -29,6 +29,15 @@ export function OverrideEditor(props: {
     });
   }, [props.overrideIndex, props.keycodeConverter]);
 
+  const sendOverride = (id: number, value: OverrideValue) => {
+    props.via.SetOverride({
+      ...value,
+      id: id,
+      trigger: value.trigger.value,
+      replacement: value.replacement.value,
+    });
+  };
+
   return (
     <Box>
       <div>{`Edit override ${props.overrideIndex}`}</div>
@@ -49,6 +58,7 @@ export function OverrideEditor(props: {
           const newOverrideSet = { ...override };
           newOverrideSet[props.overrideIndex] = newOverride;
           setOverride(newOverrideSet);
+          sendOverride(props.overrideIndex, newOverride);
           console.log(`update override ${props.overrideIndex}`);
           console.log(newOverride);
         }}

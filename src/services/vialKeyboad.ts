@@ -380,6 +380,34 @@ class VialKeyboard {
     };
   }
 
+  async SetOverride(value: {
+    id: number;
+    trigger: number;
+    replacement: number;
+    layers: number;
+    triggerMods: number;
+    negativeModMask: number;
+    suppressedMods: number;
+    options: number;
+  }) {
+    await this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_dynamic_entry_op,
+      dynamic_vial_id.dynamic_vial_key_override_set,
+      value.id & 0xff,
+      value.trigger & 0xff,
+      (value.trigger >> 8) & 0xff,
+      value.replacement & 0xff,
+      (value.replacement >> 8) & 0xff,
+      value.layers & 0xff,
+      (value.layers >> 8) & 0xff,
+      value.triggerMods & 0xff,
+      value.negativeModMask & 0xff,
+      value.suppressedMods & 0xff,
+      value.options & 0xff,
+    ]);
+  }
+
   async GetQuantumSettingsValue(id: number[]): Promise<{ [id: number]: number }> {
     const values = await this.BatchCommand(
       id.map((v) => [

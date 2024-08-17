@@ -505,6 +505,7 @@ function KeymapLayer(props: {
       >
         {keymapkeys.map((p, idx) => (
           <KeymapKey
+            key={idx}
             {...p}
             onKeycodeChange={props.onKeycodeChange}
             onClick={(target) => {
