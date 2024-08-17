@@ -33,6 +33,17 @@ export function ComboEditor(props: {
     });
   }, [props.comboIndex, props.keycodeConverter]);
 
+  const sendCombo = (id: number, combo: ComboValue) => {
+    props.via.SetCombo({
+      id: id,
+      key1: combo.keys[0].value,
+      key2: combo.keys[1].value,
+      key3: combo.keys[2].value,
+      key4: combo.keys[3].value,
+      output: combo.keys[4].value,
+    });
+  };
+
   return (
     <Box>
       <div>{`Edit combo ${props.comboIndex}`}</div>
@@ -53,6 +64,7 @@ export function ComboEditor(props: {
           const newComboSet = { ...combo };
           newComboSet[props.comboIndex] = newCombo;
           setCombo(newComboSet);
+          sendCombo(props.comboIndex, newCombo);
           console.log(`update combo ${props.comboIndex}`);
         }}
         onBack={props.onBack}

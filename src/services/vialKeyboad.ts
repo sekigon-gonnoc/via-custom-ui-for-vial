@@ -361,6 +361,32 @@ class VialKeyboard {
     };
   }
 
+  async SetCombo(value: {
+    id: number;
+    key1: number;
+    key2: number;
+    key3: number;
+    key4: number;
+    output: number;
+  }) {
+    await this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_dynamic_entry_op,
+      dynamic_vial_id.dynamic_vial_combo_set,
+      value.id & 0xff,
+      value.key1 & 0xff,
+      (value.key1 >> 8) & 0xff,
+      value.key2 & 0xff,
+      (value.key2 >> 8) & 0xff,
+      value.key3 & 0xff,
+      (value.key3 >> 8) & 0xff,
+      value.key4 & 0xff,
+      (value.key4 >> 8) & 0xff,
+      value.output & 0xff,
+      (value.output >> 8) & 0xff,
+    ]);
+  }
+
   async GetOverride(id: number) {
     const res = await this.Command([
       via_command_id.id_vial,
