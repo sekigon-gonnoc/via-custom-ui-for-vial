@@ -257,7 +257,9 @@ export class KeycodeConverter {
   }
 
   public convertIntToKeycode(value: number): QmkKeycode {
-    if (this.tapKeycodeList.map((k) => k.value).includes(value)) {
+    if (value === undefined) {
+      return DefaultQmkKeycode;
+    } else if (this.tapKeycodeList.map((k) => k.value).includes(value)) {
       return this.tapKeycodeList.find((k) => k.value === value) ?? DefaultQmkKeycode;
     } else {
       return match(value)
@@ -294,7 +296,7 @@ export class KeycodeConverter {
             };
           },
         )
-        .with(P._, () => {
+        .with(P.number, () => {
           return {
             group: "unknown",
             key: `Any(${value.toString()})`,

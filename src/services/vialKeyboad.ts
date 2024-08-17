@@ -251,6 +251,21 @@ class VialKeyboard {
     }, []);
   }
 
+  async GetEncoder(layer: number, count: number): Promise<number[][]> {
+    const encoder: number[][] = [];
+    for (let idx = 0; idx < count; idx++) {
+      const res = await this.Command([
+        via_command_id.id_vial,
+        vial_command_id.vial_get_encoder,
+        layer,
+        idx,
+      ]);
+      encoder.push([(res[0] << 8) | res[1], (res[2] << 8) | res[3]]);
+    }
+
+    return encoder;
+  }
+
   async GetDynamicEntryCount() {
     const res = await this.Command([
       via_command_id.id_vial,

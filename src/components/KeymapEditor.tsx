@@ -62,6 +62,8 @@ export interface KeymapKeyProperties {
   h: number;
   layout: number[];
   keycode: QmkKeycode;
+  reactKey: string;
+  isEncoder?: boolean;
   onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void;
   onClick?: (target: HTMLElement) => void;
 }
@@ -70,7 +72,7 @@ export const WIDTH_1U = 50;
 export function KeymapKey(props: KeymapKeyProperties) {
   return (
     <div
-      key={`${props.matrix[0]}-${props.matrix[1]}`}
+      key={props.reactKey}
       style={
         props.r != 0
           ? {
@@ -94,6 +96,7 @@ export function KeymapKey(props: KeymapKeyProperties) {
               outline: "solid",
               outlineWidth: "1px",
               outlineColor: "black",
+              borderRadius: props.isEncoder ? "50%" : "0%",
             }
       }
       onDragOver={(event) => {
@@ -300,6 +303,7 @@ function convertToKeymapKeys(
   props: KeymapProperties,
   layoutOptions: { [layout: number]: number },
   keymap: number[],
+  encodermap: number[][],
   keycodeconverter: KeycodeConverter,
 ): KeymapKeyProperties[] {
   let current = {
@@ -313,6 +317,7 @@ function convertToKeymapKeys(
     w: 1,
     h: 1,
   };
+
   const keys: KeymapKeyProperties[] = [];
   for (const row of props.layouts.keymap) {
     for (const col of row) {
@@ -328,14 +333,21 @@ function convertToKeymapKeys(
             .split(",")
             .map((v) => parseInt(v))
             .slice(0, 2);
+
+          const isEncoder = col.split("\n")[9] === "e";
+
           if (layoutOptions[layout[0]] == layout[1]) {
             keys.push({
               ...current,
               matrix: keyPos,
               layout: [],
               keycode: keycodeconverter.convertIntToKeycode(
-                keymap[keyPos[1] + keyPos[0] * props.matrix.cols],
+                isEncoder
+                  ? (encodermap?.[keyPos[0]]?.[keyPos[1]] ?? 0)
+                  : keymap[keyPos[1] + keyPos[0] * props.matrix.cols],
               ),
+              isEncoder: isEncoder,
+              reactKey: "",
             });
             current.x += current.w;
             current.w = 1;
@@ -411,6 +423,7 @@ function KeymapLayer(props: {
   keymapProps: KeymapProperties;
   layoutOption: { [layout: number]: number };
   keymap: number[];
+  encodermap: number[][];
   keycodeconverter: KeycodeConverter;
   onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void;
 }) {
@@ -423,6 +436,7 @@ function KeymapLayer(props: {
     props.keymapProps,
     props.layoutOption,
     props.keymap,
+    props.encodermap,
     props.keycodeconverter,
   );
 
@@ -435,7 +449,7 @@ function KeymapLayer(props: {
           height: `${(Math.max(...keymapkeys.map((k) => k.y)) + 2) * WIDTH_1U}px`,
         }}
       >
-        {keymapkeys.map((p) =>
+        {keymapkeys.map((p, idx) =>
           KeymapKey({
             ...p,
             onKeycodeChange: props.onKeycodeChange,
@@ -445,6 +459,7 @@ function KeymapLayer(props: {
               setpopupOpen(true);
               setAnchorEl(target);
             },
+            reactKey: idx.toString(),
           }),
         )}
       </div>
@@ -485,6 +500,8 @@ function LayerEditor(props: {
   }>({ 0: 0 });
   const [layer, setLayer] = useState(0);
   const [keymap, setKeymap] = useState<{ [layer: number]: number[] }>({});
+  const [encoderCount, setEncoderCount] = useState(0);
+  const [encodermap, setEncodermap] = useState<{ [layer: number]: number[][] }>({});
 
   useEffect(() => {
     navigator.locks.request("load-layout", async () => {
@@ -498,6 +515,15 @@ function LayerEditor(props: {
         });
         setKeymap({ ...keymap, 0: layerKeys });
       }
+
+      const encoderCount = props.keymap.layouts.keymap
+        .flatMap((row) => row.flatMap((col) => col.toString()))
+        .reduce(
+          (acc, key) => Math.max(acc, key.endsWith("e") ? parseInt(key.split(",")[0]) + 1 : acc),
+          0,
+        );
+      setEncoderCount(encoderCount);
+      setEncodermap({ 0: await props.via.GetEncoder(0, encoderCount) });
     });
   }, [props.keymap, props.via]);
 
@@ -525,6 +551,11 @@ function LayerEditor(props: {
               setKeymap(newKeymap);
               console.log(`load keymap ${layer}`);
               console.log(layerKeys);
+
+              setEncodermap({
+                ...encodermap,
+                [layer]: await props.via.GetEncoder(layer, encoderCount),
+              });
             }
             setLayer(layer);
           }}
@@ -534,15 +565,26 @@ function LayerEditor(props: {
             keymapProps={props.keymap}
             layoutOption={layoutOption}
             keymap={keymap[layer]}
+            encodermap={encodermap[layer] ?? [[]]}
             keycodeconverter={props.keycodeConverter}
             onKeycodeChange={(target, newKeycode) => {
-              const offset = props.keymap.matrix.cols * target.matrix[0] + target.matrix[1];
-              const newKeymap = { ...keymap };
-              newKeymap[layer][offset] = newKeycode.value;
-              setKeymap(newKeymap);
-              console.log(
-                `update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`,
-              );
+              if (target.isEncoder) {
+                const newencoder = { ...encodermap };
+                newencoder[layer][target.matrix[0]] =
+                  target.matrix[1] == 0
+                    ? [newKeycode.value, encodermap[layer][target.matrix[0]][1]]
+                    : [encodermap[layer][target.matrix[0]][0], newKeycode.value];
+                setEncodermap(newencoder);
+                console.log(`update encoder`);
+              } else {
+                const offset = props.keymap.matrix.cols * target.matrix[0] + target.matrix[1];
+                const newKeymap = { ...keymap };
+                newKeymap[layer][offset] = newKeycode.value;
+                setKeymap(newKeymap);
+                console.log(
+                  `update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`,
+                );
+              }
             }}
           ></KeymapLayer>
         ) : (
