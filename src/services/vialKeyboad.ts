@@ -409,6 +409,10 @@ class VialKeyboard {
     return values;
   }
 
+  async EraseQuantumSettingsValue() {
+    await this.Command([via_command_id.id_vial, vial_command_id.vial_qmk_settings_reset]);
+  }
+
   async GetCustomValue(id: number[]): Promise<number> {
     const res = await this.Command([
       via_command_id.id_unhandled,

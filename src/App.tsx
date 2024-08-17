@@ -59,7 +59,8 @@ function App() {
   const [customValueId, setCustomValueId] = useState<[string, number, number, number?][]>([]);
   const [connected, setConnected] = useState(false);
   const [kbName, setKbName] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [customEraseDialogOpen, setCustomEraseDialogOpen] = useState(false);
+  const [quantumEraseDialogOpen, setQuantumEraseDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quantumValues, setQuantumValues] = useState<{ [id: string]: number }>({});
 
@@ -140,15 +141,15 @@ function App() {
   };
 
   const onEraseClick = async () => {
-    setDialogOpen(true);
+    setCustomEraseDialogOpen(true);
   };
 
   const onDialogClose = () => {
-    setDialogOpen(false);
+    setCustomEraseDialogOpen(false);
   };
 
   const onDialogOkClick = async () => {
-    setDialogOpen(false);
+    setCustomEraseDialogOpen(false);
     await via.ResetEeprom();
     await getCustomValues(customValueId);
   };
@@ -239,6 +240,20 @@ function App() {
                       connected={connected}
                     ></QuantumSettingsSaveButton>
                   </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      sx={{
+                        width: "100%",
+                      }}
+                      variant="contained"
+                      color="error"
+                      onClick={() => {
+                        setQuantumEraseDialogOpen(true);
+                      }}
+                    >
+                      Erase
+                    </Button>
+                  </Grid>
                 </Grid>
               </List>
             </div>
@@ -262,70 +277,68 @@ function App() {
               </Box>
             ))}
           </List>
-          <Grid container rowSpacing={1} columnSpacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Button
-                sx={{
-                  display: connected ? "block" : "none",
-                  width: "100%",
-                  ml: 1,
-                }}
-                variant="contained"
-                color="primary"
-                onClick={onSaveClick}
-              >
-                Save
-              </Button>
+          <Box hidden={customMenus.length == 0}>
+            <Grid container rowSpacing={1} columnSpacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{
+                    width: "100%",
+                    ml: 1,
+                  }}
+                  variant="contained"
+                  color="primary"
+                  onClick={onSaveClick}
+                >
+                  Save
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{
+                    width: "100%",
+                  }}
+                  variant="contained"
+                  color="error"
+                  onClick={onEraseClick}
+                >
+                  Erase
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{
+                    width: "100%",
+                    ml: 1,
+                    mb: 1,
+                  }}
+                  variant="contained"
+                  color="primary"
+                  onClick={onDownloadJsonClick}
+                >
+                  DL json
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{
+                    width: "100%",
+                  }}
+                  variant="contained"
+                  color="primary"
+                  onClick={onUploadJsonClick}
+                >
+                  UP json
+                </Button>
+                <input
+                  type="file"
+                  accept=".json"
+                  ref={fileInputRef}
+                  style={{ display: "none" }}
+                  onChange={handleFileChange}
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <Button
-                sx={{
-                  display: connected ? "block" : "none",
-                  width: "100%",
-                }}
-                variant="contained"
-                color="error"
-                onClick={onEraseClick}
-              >
-                Erase
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Button
-                sx={{
-                  display: connected ? "block" : "none",
-                  width: "100%",
-                  ml: 1,
-                  mb: 1,
-                }}
-                variant="contained"
-                color="primary"
-                onClick={onDownloadJsonClick}
-              >
-                DL json
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Button
-                sx={{
-                  display: connected ? "block" : "none",
-                  width: "100%",
-                }}
-                variant="contained"
-                color="primary"
-                onClick={onUploadJsonClick}
-              >
-                UP json
-              </Button>
-              <input
-                type="file"
-                accept=".json"
-                ref={fileInputRef}
-                style={{ display: "none" }}
-                onChange={handleFileChange}
-              />
-            </Grid>
-          </Grid>
+          </Box>
           <Divider />
           <Link href="https://github.com/sekigon-gonnoc/via-custom-ui-for-vial" target="_blank">
             Usage
@@ -372,13 +385,41 @@ function App() {
         </Grid>
         <Grid item xs={1}></Grid>
       </Grid>
-      <Dialog open={dialogOpen} onClose={onDialogClose}>
-        <DialogContent>Erase all settings?</DialogContent>
+      <Dialog open={customEraseDialogOpen} onClose={onDialogClose}>
+        <DialogContent>Erase all custom settings?</DialogContent>
         <DialogActions>
           <Button color="error" onClick={onDialogClose}>
             Cancel
           </Button>
           <Button color="primary" onClick={onDialogOkClick}>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={quantumEraseDialogOpen}
+        onClose={() => {
+          setQuantumEraseDialogOpen(false);
+        }}
+      >
+        <DialogContent>Erase all quantum settings?</DialogContent>
+        <DialogActions>
+          <Button
+            color="error"
+            onClick={() => {
+              setQuantumEraseDialogOpen(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="primary"
+            onClick={async () => {
+              setQuantumEraseDialogOpen(false);
+              await via.EraseQuantumSettingsValue();
+              setActiveMenu(undefined);
+            }}
+          >
             OK
           </Button>
         </DialogActions>

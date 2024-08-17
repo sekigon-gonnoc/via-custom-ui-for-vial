@@ -3,7 +3,7 @@
   outline-width: 1px;
   outline-color: black;
   user-select: none;
-  border-radius: 10%;
+  border-radius: 5px 5px;
 
   .legend-container {
     width: 100%;
