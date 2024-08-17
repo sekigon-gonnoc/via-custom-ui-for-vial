@@ -2,7 +2,7 @@ import { Box, Button, Grid } from "@mui/material";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { Fragment, useEffect, useState } from "react";
-import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
+import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 
 export function ComboEditor(props: {
   via: ViaKeyboard;
@@ -94,7 +94,7 @@ function ComboEntry(props: {
                 </Box>
               </Grid>
               <Grid item xs={7}>
-                <ComboKey
+                <EditableKey
                   keycode={k}
                   onClick={(target) => {
                     setpopupOpen(true);
@@ -107,7 +107,7 @@ function ComboEntry(props: {
                       keys: candidateCombo.keys.map((k, id) => (id == idx ? keycode : k)),
                     } as ComboValue);
                   }}
-                ></ComboKey>
+                ></EditableKey>
               </Grid>
             </Fragment>
           );
@@ -152,30 +152,5 @@ function ComboEntry(props: {
         }}
       ></KeymapKeyPopUp>
     </>
-  );
-}
-
-function ComboKey(props: {
-  keycode: QmkKeycode;
-  onKeycodeChange?: (newKeycode: QmkKeycode) => void;
-  onClick?: (target: HTMLElement) => void;
-}) {
-  return (
-    <Box
-      width={WIDTH_1U}
-      height={WIDTH_1U}
-      sx={{ border: "1px solid black" }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"));
-        props.onKeycodeChange?.(keycode);
-      }}
-      onClick={(event) => props.onClick?.(event.currentTarget)}
-    >
-      {props.keycode.modLabel ?? ""}
-      {props.keycode.label}
-      {props.keycode.holdLabel ?? ""}
-    </Box>
   );
 }

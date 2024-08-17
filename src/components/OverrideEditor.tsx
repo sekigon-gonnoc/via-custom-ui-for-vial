@@ -2,7 +2,7 @@ import { Box, Button, Checkbox, FormControlLabel, FormGroup, Grid, Switch } from
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { Fragment, useEffect, useState } from "react";
-import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
+import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 
 export function OverrideEditor(props: {
   via: ViaKeyboard;
@@ -138,7 +138,7 @@ function OverrideEntry(props: {
                 </Box>
               </Grid>
               <Grid item xs={7}>
-                <OverrideKey
+                <EditableKey
                   keycode={k}
                   onClick={(target) => {
                     setpopupOpen(true);
@@ -153,7 +153,7 @@ function OverrideEntry(props: {
                       setCandidateOverride({ ...candidateOverride, replacement: keycode });
                     }
                   }}
-                ></OverrideKey>
+                ></EditableKey>
               </Grid>
             </Fragment>
           );
@@ -309,31 +309,6 @@ function OverrideEntry(props: {
         }}
       ></KeymapKeyPopUp>
     </>
-  );
-}
-
-function OverrideKey(props: {
-  keycode: QmkKeycode;
-  onKeycodeChange?: (newKeycode: QmkKeycode) => void;
-  onClick?: (target: HTMLElement) => void;
-}) {
-  return (
-    <Box
-      width={WIDTH_1U}
-      height={WIDTH_1U}
-      sx={{ border: "1px solid black" }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"));
-        props.onKeycodeChange?.(keycode);
-      }}
-      onClick={(event) => props.onClick?.(event.currentTarget)}
-    >
-      {props.keycode.modLabel ?? ""}
-      {props.keycode.label}
-      {props.keycode.holdLabel ?? ""}
-    </Box>
   );
 }
 

@@ -2,7 +2,7 @@ import { Box, Button, IconButton, Stack, TextField } from "@mui/material";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { useEffect, useState } from "react";
-import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
+import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
 
 export function MacroEditor(props: {
@@ -118,32 +118,6 @@ export function MacroEditor(props: {
   );
 }
 
-function MacroKey(props: {
-  keycode: QmkKeycode;
-  onKeycodeChange?: (newKeycode: QmkKeycode) => void;
-  onClick?: (target: HTMLElement) => void;
-  onDelete?: () => void;
-}) {
-  return (
-    <Box
-      width={WIDTH_1U}
-      height={WIDTH_1U}
-      sx={{ border: "1px solid black" }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"));
-        props.onKeycodeChange?.(keycode);
-      }}
-      onClick={(event) => props.onClick?.(event.currentTarget)}
-    >
-      {props.keycode.modLabel ?? ""}
-      {props.keycode.label}
-      {props.keycode.holdLabel ?? ""}
-    </Box>
-  );
-}
-
 function MacroEntry(props: {
   buffer: number[];
   keycodeConverter: KeycodeConverter;
@@ -225,6 +199,7 @@ function MacroEntry(props: {
             {action.length < 1 || action[0] != 1 || action[1] > 7 ? (
               <TextField
                 value={new TextDecoder("ascii").decode(Uint8Array.from(action))}
+                fullWidth
                 onChange={(event) => {
                   const asciiArray = [...Array(event.target.value.length)].reduce((acc, _, idx) => {
                     const charcode = event.target.value.charCodeAt(idx);
@@ -252,11 +227,8 @@ function MacroEntry(props: {
               ></TextField>
             ) : (
               <>
-                <MacroKey
+                <EditableKey
                   keycode={props.keycodeConverter.convertIntToKeycode(action[2])}
-                  onDelete={() => {
-                    setActions(actions.filter((_, id) => id !== idx));
-                  }}
                   onKeycodeChange={(keycode) =>
                     setActions(
                       actions.map((action, id) =>
@@ -270,8 +242,8 @@ function MacroEntry(props: {
                     setCandidateKeycode(props.keycodeConverter.convertIntToKeycode(action[2]));
                     setFocusedAction(idx);
                   }}
-                ></MacroKey>
-                <div>
+                ></EditableKey>
+                <div className="macro-item-label">
                   {{ 1: "Tap", 2: "Down", 3: "Up", 5: "Tap", 6: "Down", 7: "Up" }[action[1]]}
                 </div>
               </>
@@ -299,14 +271,20 @@ function MacroEntry(props: {
           setCandidateKeycode(event.keycode);
         }}
       ></KeymapKeyPopUp>
-      <Button onClick={() => setActions([...actions, []])}>+TEXT</Button>
-      <Button onClick={() => setActions([...actions, [1, 1, 0]])}>+TAP</Button>
-      <Button onClick={() => setActions([...actions, [1, 2, 0]])}>+DOWN</Button>
-      <Button onClick={() => setActions([...actions, [1, 3, 0]])}>+UP</Button>
-      <Button onClick={() => setActions([...actions, [1, 4, 0]])}>+DELAY</Button>
-      <Button onClick={() => setActions(getActions(props.buffer))}>Revert</Button>
-      <Button onClick={() => props.onBack()}>BACK</Button>
-      <Button onClick={() => props.onSave(actions)}>SAVE</Button>
+      <div>
+        <Button onClick={() => setActions([...actions, []])}>+TEXT</Button>
+        <Button onClick={() => setActions([...actions, [1, 1, 0]])}>+TAP</Button>
+        <Button onClick={() => setActions([...actions, [1, 2, 0]])}>+DOWN</Button>
+        <Button onClick={() => setActions([...actions, [1, 3, 0]])}>+UP</Button>
+        <Button onClick={() => setActions([...actions, [1, 4, 0]])}>+DELAY</Button>
+      </div>
+      <div>
+        <Button onClick={() => setActions(getActions(props.buffer))}>Revert</Button>
+        <Button onClick={() => props.onBack()}>BACK</Button>
+        <Button onClick={() => props.onSave(actions)} variant="outlined">
+          SAVE
+        </Button>
+      </div>
     </>
   );
 }

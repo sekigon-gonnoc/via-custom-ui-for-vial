@@ -21,12 +21,11 @@ import {
 import { MenuItemProperties } from "./components/ViaMenuItem";
 import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
 import { match, P } from "ts-pattern";
-import { act } from "react-dom/test-utils";
-import { TapDanceEditor } from "./components/TapDanceEditor";
 import {
   QuantumSettingsEditor,
   QuantumSettingsSaveButton,
 } from "./components/QuantumSettingsEditor";
+import "./App.css";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");

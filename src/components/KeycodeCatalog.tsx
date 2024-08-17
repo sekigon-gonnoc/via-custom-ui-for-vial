@@ -19,14 +19,11 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggabl
       title={`${props.keycode.key}(${props.keycode.value.toString()})`}
       placement="top"
     >
-      <Box
+      <div
+        className="keycatalog-key"
         style={{
           width: WIDTH_1U - 3,
           height: WIDTH_1U - 3,
-          outline: "solid",
-          outlineWidth: "1px",
-          outlineColor: "black",
-          userSelect: "none",
         }}
         draggable={props.draggable}
         onDragStart={(event) => {
@@ -69,7 +66,7 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggabl
         }}
       >
         {props.keycode.label}
-      </Box>
+      </div>
     </Tooltip>
   );
 }

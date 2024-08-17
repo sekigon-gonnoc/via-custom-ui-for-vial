@@ -7,6 +7,7 @@ import {
   FormControl,
   FormControlLabel,
   FormGroup,
+  Grid,
   MenuItem,
   Popper,
   Select,
@@ -28,6 +29,7 @@ import { MacroEditor } from "./MacroEditor";
 import { matchSorter } from "match-sorter";
 import { ComboEditor } from "./ComboEditor";
 import { OverrideEditor } from "./OverrideEditor";
+import "../App.css";
 
 export interface KeymapProperties {
   matrix: { rows: number; cols: number };
@@ -68,11 +70,57 @@ export interface KeymapKeyProperties {
   onClick?: (target: HTMLElement) => void;
 }
 
-export const WIDTH_1U = 50;
+export const WIDTH_1U = 60;
+
+export function EditableKey(props: {
+  keycode: QmkKeycode;
+  onKeycodeChange?: (newKeycode: QmkKeycode) => void;
+  onClick?: (target: HTMLElement) => void;
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  return (
+    <div
+      className={`keymap-key ${isDragOver && "drag-over"}`}
+      style={{
+        width: WIDTH_1U,
+        height: WIDTH_1U,
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setIsDragOver(true);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"));
+        props.onKeycodeChange?.(keycode);
+        setIsDragOver(false);
+      }}
+      onDragLeave={() => {
+        setIsDragOver(false);
+      }}
+      onClick={(event) => props.onClick?.(event.currentTarget)}
+    >
+      <Grid container direction={"column"} className="legend-container">
+        <Grid item xs={4}>
+          <div className="mod-legend">{props.keycode.modLabel ?? ""}</div>
+        </Grid>
+        <Grid item xs={4}>
+          <div className="main-legend">{props.keycode.label}</div>
+        </Grid>
+        <Grid item xs={4}>
+          <div className="hold-legend">{props.keycode.holdLabel ?? ""}</div>
+        </Grid>
+      </Grid>
+    </div>
+  );
+}
+
 export function KeymapKey(props: KeymapKeyProperties) {
+  const [isDragOver, setIsDragOver] = useState(false);
   return (
     <div
       key={props.reactKey}
+      className={`keymap-key ${props.isEncoder && "keymap-encoder"} ${isDragOver && "drag-over"}`}
       style={
         props.r != 0
           ? {
@@ -81,9 +129,6 @@ export function KeymapKey(props: KeymapKeyProperties) {
               left: (props.rx + props.offsetx) * WIDTH_1U,
               width: props.w * WIDTH_1U - 3,
               height: props.h * WIDTH_1U - 3,
-              outline: "solid",
-              outlineWidth: "1px",
-              outlineColor: "black",
               transform: `rotate(${props.r}deg)`,
               transformOrigin: `${-props.offsetx * WIDTH_1U}px ${-props.offsety * WIDTH_1U}px`,
             }
@@ -93,25 +138,34 @@ export function KeymapKey(props: KeymapKeyProperties) {
               left: props.x * WIDTH_1U,
               width: props.w * WIDTH_1U - 3,
               height: props.h * WIDTH_1U - 3,
-              outline: "solid",
-              outlineWidth: "1px",
-              outlineColor: "black",
-              borderRadius: props.isEncoder ? "50%" : "0%",
             }
       }
       onDragOver={(event) => {
         event.preventDefault();
+        setIsDragOver(true);
       }}
       onDrop={(event) => {
         event.preventDefault();
         const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"));
         props.onKeycodeChange?.(props, keycode);
+        setIsDragOver(false);
+      }}
+      onDragLeave={() => {
+        setIsDragOver(false);
       }}
       onClick={(event) => props.onClick?.(event.currentTarget)}
     >
-      {props.keycode.modLabel ?? ""}
-      {props.keycode.label}
-      {props.keycode.holdLabel ?? ""}
+      <Grid container direction={"column"} className="legend-container">
+        <Grid item xs={4}>
+          <div className="mod-legend">{props.keycode.modLabel ?? ""}</div>
+        </Grid>
+        <Grid item xs={4}>
+          <div className="main-legend">{props.keycode.label}</div>
+        </Grid>
+        <Grid item xs={4}>
+          <div className="hold-legend">{props.keycode.holdLabel ?? ""}</div>
+        </Grid>
+      </Grid>
     </div>
   );
 }
@@ -191,8 +245,8 @@ export function KeymapKeyPopUp(props: {
             renderInput={(params) => <TextField {...params} label="Base(Tap)" />}
             renderOption={(props, option, state, ownerState) => (
               <Box component="li" {...props}>
-                <div>{option.label}</div>
-                <div>{option.key}</div>
+                <div className="list-label">{option.label}</div>
+                <div className="list-key">{option.key}</div>
               </Box>
             )}
           ></Autocomplete>
@@ -227,8 +281,8 @@ export function KeymapKeyPopUp(props: {
             renderInput={(params) => <TextField {...params} label="Option(Hold)" />}
             renderOption={(props, option, state, ownerState) => (
               <Box component="li" {...props}>
-                <div>{option.label}</div>
-                <div>{option.key}</div>
+                <div className="list-label">{option.label}</div>
+                <div className="list-key">{option.key}</div>
               </Box>
             )}
           ></Autocomplete>

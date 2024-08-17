@@ -1,0 +1,79 @@
+.keymap-key {
+  outline: solid;
+  outline-width: 1px;
+  outline-color: black;
+  user-select: none;
+  border-radius: 10%;
+
+  .legend-container {
+    width: 100%;
+    height: 100%;
+  }
+
+  :hover {
+    background-color: whitesmoke;
+  }
+
+  .mod-legend {
+    font-size: 10px;
+    text-align: center;
+    height: 100%;
+  }
+
+  .main-legend {
+    font-size: 12px;
+    text-align: center;
+    align-items: center;
+    height: 100%;
+  }
+
+  .hold-legend {
+    font-size: 10px;
+    text-align: center;
+    height: 100%;
+  }
+}
+
+.keymap-key.drag-over {
+  background-color: whitesmoke;
+}
+
+.keymap-encoder {
+  border-radius: 50%;
+}
+
+.catalog-key {
+  outline: solid;
+  outline-width: 1px;
+  outline-color: black;
+  user-select: none;
+}
+
+.list-label {
+  align-items: start;
+}
+
+.list-key {
+  align-items: end;
+  font-size: smaller;
+}
+
+.keycatalog-key {
+  outline: solid;
+  outline-width: 1px;
+  outline-color: black;
+  user-select: none;
+  font-size: 12px;
+  text-align: center;
+
+  :hover {
+    background-color: whitesmoke;
+  }
+}
+
+.macro-item-label {
+  margin-left: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

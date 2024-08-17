@@ -3,7 +3,7 @@ import { ViaKeyboard } from "../services/vialKeyboad";
 import { KeycodeCatalog } from "./KeycodeCatalog";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { Box, Button, FormControl, Grid, MenuItem, Select, TextField } from "@mui/material";
-import { KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
+import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 
 export function TapDanceEditor(props: {
   via: ViaKeyboard;
@@ -61,31 +61,6 @@ interface TapDanceValue {
   tappingTerm: number;
 }
 
-function TapDanceKey(props: {
-  keycode: QmkKeycode;
-  onKeycodeChange?: (newKeycode: QmkKeycode) => void;
-  onClick?: (target: HTMLElement) => void;
-}) {
-  return (
-    <Box
-      width={WIDTH_1U}
-      height={WIDTH_1U}
-      sx={{ border: "1px solid black" }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const keycode = JSON.parse(event.dataTransfer.getData("QmkKeycode"));
-        props.onKeycodeChange?.(keycode);
-      }}
-      onClick={(event) => props.onClick?.(event.currentTarget)}
-    >
-      {props.keycode.modLabel ?? ""}
-      {props.keycode.label}
-      {props.keycode.holdLabel ?? ""}
-    </Box>
-  );
-}
-
 function TapDanceEntry(props: {
   td: TapDanceValue;
   keycodeconverter: KeycodeConverter;
@@ -140,7 +115,7 @@ function TapDanceEntry(props: {
                 </Box>
               </Grid>
               <Grid item xs={7}>
-                <TapDanceKey
+                <EditableKey
                   keycode={k.key}
                   onClick={(target) => {
                     setpopupOpen(true);
@@ -149,7 +124,7 @@ function TapDanceEntry(props: {
                     setKeyIndex(idx);
                   }}
                   onKeycodeChange={handleChange[idx]}
-                ></TapDanceKey>
+                ></EditableKey>
               </Grid>
             </Fragment>
           );
