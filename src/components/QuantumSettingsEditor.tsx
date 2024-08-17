@@ -272,6 +272,18 @@ export function QuantumSettingsSaveButton(props: {
   value: { [id: string]: number };
   connected: boolean;
 }) {
+  const sendQuantumSettings = (values: { [id: string]: number }) => {
+    props.via.SetQuantumSettingsValue(
+      Object.entries(values).reduce((acc, value) => {
+        const idNum = QuantumSettingDefinition.map((def) => def.content)
+          .map((def) => def.map((d) => d.content))
+          .flat()
+          .find((q) => q[0] === value[0])?.[1];
+        return idNum !== undefined ? { ...acc, [idNum]: value[1] } : acc;
+      }, {}),
+    );
+  };
+
   return (
     <Button
       sx={{
@@ -284,6 +296,7 @@ export function QuantumSettingsSaveButton(props: {
       onClick={() => {
         console.log("Save");
         console.log(props.value);
+        sendQuantumSettings(props.value);
       }}
     >
       Save

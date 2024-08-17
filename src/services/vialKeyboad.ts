@@ -395,6 +395,18 @@ class VialKeyboard {
     }, {});
   }
 
+  async SetQuantumSettingsValue(value: { [id: number]: number }) {
+    await this.BatchCommand(
+      Object.entries(value).map((v) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_qmk_settings_set,
+        parseInt(v[0]) & 0xff,
+        (parseInt(v[0]) >> 8) & 0xff,
+        v[1],
+      ]),
+    );
+  }
+
   async EraseQuantumSettingsValue() {
     await this.Command([via_command_id.id_vial, vial_command_id.vial_qmk_settings_reset]);
   }
