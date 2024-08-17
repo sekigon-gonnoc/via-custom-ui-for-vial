@@ -370,6 +370,22 @@ class VialKeyboard {
     return macro_buffer.map((b) => Array.from(b.slice(4))).flat();
   }
 
+  async SetMacroBuffer(offset: number, data: number[]) {
+    const pageLen = Math.ceil(data.length / 28);
+    await this.BatchCommand(
+      [...Array(pageLen)].map((_, page) => {
+        const pageOffset = offset + page * 28;
+        return [
+          via_command_id.id_dynamic_keymap_macro_set_buffer,
+          (pageOffset >> 8) & 0xff,
+          pageOffset & 0xff,
+          28,
+          ...data.slice(page * 28, page * 28 + 28),
+        ];
+      }),
+    );
+  }
+
   async GetCombo(id: number) {
     const res = await this.Command([
       via_command_id.id_vial,

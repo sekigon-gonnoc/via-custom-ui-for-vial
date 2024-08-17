@@ -64,6 +64,10 @@ export function MacroEditor(props: {
     }
   };
 
+  const sendMacros = (offset: number, data: number[]) => {
+    props.via.SetMacroBuffer(offset, data);
+  };
+
   const saveMacros = async (actions: number[][], macroIndex: number) => {
     const actionBuffer = actions
       .map((action) => {
@@ -101,6 +105,7 @@ export function MacroEditor(props: {
       }, [] as number[]);
     console.log(`write macro data. offset:${writeOffset} length:${writeData.length}`);
     console.log(writeData);
+    sendMacros(writeOffset, writeData);
 
     setMacroData(newMacroData);
   };
