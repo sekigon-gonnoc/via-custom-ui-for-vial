@@ -585,6 +585,10 @@ function LayerEditor(props: {
     await props.via.SetKeycode(layer, row, col, keycode);
   };
 
+  const sendEncoder = async (layer: number, index: number, direction: number, keycode: number) => {
+    await props.via.SetEncoder(layer, index, direction, keycode);
+  };
+
   const sendLayout = async (layout: number) => {
     await props.via.SetLayoutOption(layout);
   };
@@ -638,6 +642,7 @@ function LayerEditor(props: {
                     ? [newKeycode.value, encodermap[layer][target.matrix[0]][1]]
                     : [encodermap[layer][target.matrix[0]][0], newKeycode.value];
                 setEncodermap(newencoder);
+                sendEncoder(layer, target.matrix[0], target.matrix[1], newKeycode.value);
                 console.log(`update encoder`);
               } else {
                 const offset = props.keymap.matrix.cols * target.matrix[0] + target.matrix[1];

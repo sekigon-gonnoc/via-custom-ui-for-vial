@@ -270,6 +270,18 @@ class VialKeyboard {
     return encoder;
   }
 
+  async SetEncoder(layer: number, encoder: number, direction: number, keycode: number) {
+    await this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_set_encoder,
+      layer & 0xff,
+      encoder & 0xff,
+      direction & 0xff,
+      (keycode >> 8) & 0xff,
+      keycode & 0xff,
+    ]);
+  }
+
   async GetDynamicEntryCount() {
     const res = await this.Command([
       via_command_id.id_vial,
