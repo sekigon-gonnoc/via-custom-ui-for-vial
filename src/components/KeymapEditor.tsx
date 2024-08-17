@@ -27,6 +27,7 @@ import { match, P } from "ts-pattern";
 import { MacroEditor } from "./MacroEditor";
 import { matchSorter } from "match-sorter";
 import { ComboEditor } from "./ComboEditor";
+import { OverrideEditor } from "./OverrideEditor";
 
 export interface KeymapProperties {
   matrix: { rows: number; cols: number };
@@ -562,11 +563,14 @@ export function KeymapEditor(props: {
     override: number;
   };
 }) {
-  const [menuType, setMenuType] = useState<"layer" | "tapdance" | "macro" | "combo">("layer");
+  const [menuType, setMenuType] = useState<"layer" | "tapdance" | "macro" | "combo" | "override">(
+    "layer",
+  );
   const [layerCount, setLayerCount] = useState(1);
   const [tdIndex, setTdIndex] = useState(-1);
   const [macroIndex, setMacroIndex] = useState(-1);
   const [comboIndex, setComboIndex] = useState(-1);
+  const [overrideIndex, setOverrideIndex] = useState(-1);
 
   useEffect(() => {
     navigator.locks.request("load-layout", async () => {
@@ -625,6 +629,17 @@ export function KeymapEditor(props: {
           }}
         ></ComboEditor>
       </Box>
+      <Box hidden={menuType !== "override"}>
+        <OverrideEditor
+          via={props.via}
+          keycodeConverter={keycodeConverter}
+          overrideIndex={overrideIndex}
+          overrideCount={props.dynamicEntryCount.override}
+          onBack={() => {
+            setMenuType("layer");
+          }}
+        ></OverrideEditor>
+      </Box>
       <KeycodeCatalog
         keycodeConverter={keycodeConverter}
         tab={[
@@ -651,6 +666,10 @@ export function KeymapEditor(props: {
         onComoboSelect={(index) => {
           setMenuType("combo");
           setComboIndex(index);
+        }}
+        onOverrideSelect={(index) => {
+          setMenuType("override");
+          setOverrideIndex(index);
         }}
       ></KeycodeCatalog>
     </>

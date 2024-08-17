@@ -98,7 +98,7 @@ export function KeycodeCatalog(props: {
   onMacroSelect?: (index: number) => void;
   onTapdanceSelect?: (index: number) => void;
   onComoboSelect?: (index: number) => void;
-  onKeyoverrideSelect?: (index: number) => void;
+  onOverrideSelect?: (index: number) => void;
 }) {
   const [tabValue, setTabValue] = useState(0);
   return (
@@ -216,7 +216,7 @@ export function KeycodeCatalog(props: {
                         }}
                         draggable={false}
                         onClick={() => {
-                          props.onKeyoverrideSelect?.(idx);
+                          props.onOverrideSelect?.(idx);
                         }}
                       ></KeyListKey>
                     ))}

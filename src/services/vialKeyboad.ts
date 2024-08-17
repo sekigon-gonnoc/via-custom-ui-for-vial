@@ -359,6 +359,25 @@ class VialKeyboard {
     };
   }
 
+  async GetOverride(id: number) {
+    const res = await this.Command([
+      via_command_id.id_vial,
+      vial_command_id.vial_dynamic_entry_op,
+      dynamic_vial_id.dynamic_vial_key_override_get,
+      id & 0xff,
+    ]);
+
+    return {
+      trigger: res[1] | (res[2] << 8),
+      replacement: res[3] | (res[4] << 8),
+      layers: res[5] | (res[6] << 8),
+      triggerMods: res[7],
+      negativeModMask: res[8],
+      suppressedMods: res[9],
+      options: res[10],
+    };
+  }
+
   async GetCustomValue(id: number[]): Promise<number> {
     const res = await this.Command([
       via_command_id.id_unhandled,
