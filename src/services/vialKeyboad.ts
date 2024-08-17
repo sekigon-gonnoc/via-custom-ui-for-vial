@@ -232,6 +232,17 @@ class VialKeyboard {
       }, []);
   }
 
+  async SetKeycode(layer: number, row: number, col: number, keycode: number) {
+    await this.Command([
+      via_command_id.id_dynamic_keymap_set_keycode,
+      layer & 0xff,
+      row & 0xff,
+      col & 0xff,
+      keycode & 0xff,
+      (keycode >> 8) & 0xff,
+    ]);
+  }
+
   async GetEncoder(layer: number, count: number): Promise<number[][]> {
     const encoder: number[][] = [];
     for (let idx = 0; idx < count; idx++) {

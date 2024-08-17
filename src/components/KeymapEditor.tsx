@@ -581,6 +581,10 @@ function LayerEditor(props: {
     });
   }, [props.keymap, props.via]);
 
+  const setKeycode = async (layer: number, row: number, col: number, keycode: number) => {
+    await props.via.SetKeycode(layer, row, col, keycode);
+  };
+
   return (
     <>
       <div>
@@ -635,6 +639,7 @@ function LayerEditor(props: {
                 const newKeymap = { ...keymap };
                 newKeymap[layer][offset] = newKeycode.value;
                 setKeymap(newKeymap);
+                setKeycode(layer, target.matrix[0], target.matrix[1], newKeycode.value);
                 console.log(
                   `update ${layer},${target.matrix[0]},${target.matrix[1]} to ${newKeycode.value}`,
                 );
