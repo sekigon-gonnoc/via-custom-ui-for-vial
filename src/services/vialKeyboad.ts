@@ -134,7 +134,9 @@ class VialKeyboard {
       const res: Uint8Array[] = [];
       this.hid.setReceiveCallback((msg) => res.push(msg));
 
-      messages.forEach(async (msg) => await this.hid.write(Uint8Array.from(msg)));
+      for (const msg of messages) {
+        await this.hid.write(Uint8Array.from(msg));
+      }
 
       let timeout = timeoutMs;
       let currentLen = res.length;
@@ -152,6 +154,8 @@ class VialKeyboard {
       }
 
       this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+
+      console.log(res)
 
       return res;
     });
@@ -250,8 +254,8 @@ class VialKeyboard {
       layer & 0xff,
       row & 0xff,
       col & 0xff,
-      keycode & 0xff,
       (keycode >> 8) & 0xff,
+      keycode & 0xff,
     ]);
   }
 

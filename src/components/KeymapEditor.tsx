@@ -500,7 +500,7 @@ function KeymapLayer(props: {
         style={{
           position: "relative",
           marginTop: 50,
-          height: `${(Math.max(...keymapkeys.map((k) => k.y)) + 2) * WIDTH_1U}px`,
+          height: `${(Math.max(...keymapkeys.map((k) => k.y)) + 1) * WIDTH_1U}px`,
         }}
       >
         {keymapkeys.map((p, idx) => (

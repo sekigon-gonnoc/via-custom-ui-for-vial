@@ -97,7 +97,16 @@ function App() {
     await via.GetVialKeyboardId();
     console.log(`protocol version:${version}`);
     const compressed = await via.GetVialCompressedDefinition();
-    const decompressed = xz_decompress(compressed);
+
+    let decompressed: Uint8Array;
+    try {
+      decompressed = xz_decompress(compressed);
+    } catch {
+      via.Close();
+      alert("Failed to open the keyboard");
+      return;
+    }
+
     const decoder = new TextDecoder();
     const jsonText = decoder.decode(decompressed);
     console.log(jsonText);
@@ -165,7 +174,7 @@ function App() {
   };
 
   const onDownloadJsonClick = async () => {
-    downloadData(JSON.stringify(customValues, null, 4), `${kbName}_custon_config.json`);
+    downloadData(JSON.stringify(customValues, null, 4), `${kbName}_custom_config.json`);
   };
 
   const onUploadJsonClick = async () => {
