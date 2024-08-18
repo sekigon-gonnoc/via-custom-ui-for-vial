@@ -1,8 +1,8 @@
 import { Box, Button, Checkbox, FormControlLabel, FormGroup, Grid, Switch } from "@mui/material";
+import { Fragment, useEffect, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
-import { Fragment, useEffect, useState } from "react";
-import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
+import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
 
 export function OverrideEditor(props: {
   via: ViaKeyboard;
@@ -116,7 +116,7 @@ function OverrideEntry(props: {
         <Grid item xs={7}>
           <Switch
             checked={(candidateOverride.options & OverrideOption.ENABLED) != 0}
-            onChange={(event, checked) => {
+            onChange={(_event, checked) => {
               setCandidateOverride({
                 ...candidateOverride,
                 options:
@@ -214,7 +214,7 @@ function OverrideEntry(props: {
                     <Checkbox
                       size="small"
                       checked={(candidateOverride.layers & (1 << idx)) > 0}
-                      onChange={(event, checked) => {
+                      onChange={(_event, checked) => {
                         setCandidateOverride({
                           ...candidateOverride,
                           layers:
@@ -262,7 +262,7 @@ function OverrideEntry(props: {
                     <Checkbox
                       size="small"
                       checked={(candidateOverride.options & (1 << idx)) != 0}
-                      onChange={(event, checked) => {
+                      onChange={(_event, checked) => {
                         setCandidateOverride({
                           ...candidateOverride,
                           options:
@@ -334,7 +334,7 @@ function ModifierCheckbox(props: { value: number; onChange: (value: number) => v
               <Checkbox
                 size="small"
                 checked={(props.value & (1 << bitIdx)) > 0}
-                onChange={(event, checked) => {
+                onChange={(_event, checked) => {
                   props.onChange((props.value & ~(1 << bitIdx)) | (checked ? 1 << bitIdx : 0));
                 }}
               ></Checkbox>

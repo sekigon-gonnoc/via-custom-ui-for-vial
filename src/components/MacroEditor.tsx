@@ -1,9 +1,9 @@
-import { Box, Button, IconButton, Stack, TextField } from "@mui/material";
-import { ViaKeyboard } from "../services/vialKeyboad";
-import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
-import { useEffect, useState } from "react";
-import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
 import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
+import { Box, Button, IconButton, Stack, TextField } from "@mui/material";
+import { useEffect, useState } from "react";
+import { ViaKeyboard } from "../services/vialKeyboad";
+import { DefaultQmkKeycode, KeycodeConverter } from "./keycodes/keycodeConverter";
+import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
 
 export function MacroEditor(props: {
   via: ViaKeyboard;

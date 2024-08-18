@@ -13,23 +13,23 @@ import {
   Select,
   TextField,
 } from "@mui/material";
-import { ViaKeyboard } from "../services/vialKeyboad";
+import { matchSorter } from "match-sorter";
 import { useEffect, useMemo, useState } from "react";
+import { match, P } from "ts-pattern";
+import "../App.css";
+import { ViaKeyboard } from "../services/vialKeyboad";
+import { ComboEditor } from "./ComboEditor";
+import { KeycodeCatalog } from "./KeycodeCatalog";
 import {
   DefaultQmkKeycode,
-  QmkKeycode,
   KeycodeConverter,
-  ModifierBits,
   ModifierBit,
+  ModifierBits,
+  QmkKeycode,
 } from "./keycodes/keycodeConverter";
-import { KeycodeCatalog } from "./KeycodeCatalog";
-import { TapDanceEditor } from "./TapDanceEditor";
-import { match, P } from "ts-pattern";
 import { MacroEditor } from "./MacroEditor";
-import { matchSorter } from "match-sorter";
-import { ComboEditor } from "./ComboEditor";
 import { OverrideEditor } from "./OverrideEditor";
-import "../App.css";
+import { TapDanceEditor } from "./TapDanceEditor";
 
 export interface KeymapProperties {
   matrix: { rows: number; cols: number };
@@ -218,7 +218,7 @@ export function KeymapKeyPopUp(props: {
           <Autocomplete
             value={tapValue}
             filterOptions={filterOptions}
-            onChange={(event: any, newValue) => {
+            onChange={(_event, newValue) => {
               setTapValue(newValue ?? DefaultQmkKeycode);
               const newKeycode =
                 props.keycodeconverter.combineKeycodes(
@@ -233,7 +233,7 @@ export function KeymapKeyPopUp(props: {
               });
             }}
             inputValue={tapInputValue}
-            onInputChange={(event, newInputValue) => {
+            onInputChange={(_event, newInputValue) => {
               setTapInputValue(newInputValue);
             }}
             options={props.keycodeconverter.getTapKeycodeList()}
@@ -243,7 +243,7 @@ export function KeymapKeyPopUp(props: {
             getOptionKey={(option) => option.key}
             getOptionLabel={(option) => option.label}
             renderInput={(params) => <TextField {...params} label="Base(Tap)" />}
-            renderOption={(props, option, state, ownerState) => (
+            renderOption={(props, option) => (
               <Box component="li" {...props}>
                 <div className="list-label">{option.label}</div>
                 <div className="list-key">{option.key}</div>
@@ -254,7 +254,7 @@ export function KeymapKeyPopUp(props: {
           <Autocomplete
             value={holdValue}
             filterOptions={filterOptions}
-            onChange={(event: any, newValue) => {
+            onChange={(_event, newValue) => {
               setHoldValue(newValue ?? DefaultQmkKeycode);
               const newKeycode =
                 props.keycodeconverter.combineKeycodes(
@@ -269,7 +269,7 @@ export function KeymapKeyPopUp(props: {
               });
             }}
             inputValue={holdInputValue}
-            onInputChange={(event, newInputValue) => {
+            onInputChange={(_event, newInputValue) => {
               setHoldInputValue(newInputValue);
             }}
             options={props.keycodeconverter.getHoldKeycodeList()}
@@ -279,7 +279,7 @@ export function KeymapKeyPopUp(props: {
             getOptionKey={(option) => option.key}
             getOptionLabel={(option) => option.label}
             renderInput={(params) => <TextField {...params} label="Option(Hold)" />}
-            renderOption={(props, option, state, ownerState) => (
+            renderOption={(props, option) => (
               <Box component="li" {...props}>
                 <div className="list-label">{option.label}</div>
                 <div className="list-key">{option.key}</div>
@@ -443,7 +443,7 @@ function LayoutSelector(props: {
           props.onChange({ 0: event.target.value } as { [layout: number]: number })
         }
       >
-        {props.layouts.labels[0]?.slice(1).map((label, index) => (
+        {props.layouts.labels?.[0]?.slice(1).map((label, index) => (
           <MenuItem key={label} value={index}>
             {label}
           </MenuItem>

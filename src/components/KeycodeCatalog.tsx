@@ -1,7 +1,7 @@
-import { Box, Grid, Tab, Tabs, Tooltip } from "@mui/material";
-import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
+import { Box, Tab, Tabs, Tooltip } from "@mui/material";
 import { useState } from "react";
 import { match, P } from "ts-pattern";
+import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 
 const WIDTH_1U = 50;
 function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggable: boolean }) {
@@ -32,7 +32,7 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggabl
             setIsDragging(true);
           }
         }}
-        onDragEnd={(event) => {
+        onDragEnd={(_event) => {
           if (props.draggable) {
             setIsDragging(false);
           }
@@ -55,7 +55,7 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggabl
             window.scrollBy(0, scrollSpeed);
           }
         }}
-        onMouseLeave={(event) => {
+        onMouseLeave={(_event) => {
           setShowToolTip(false);
         }}
         onClick={() => {
@@ -103,7 +103,7 @@ export function KeycodeCatalog(props: {
       <Box>
         <Tabs
           value={tabValue}
-          onChange={(event, newValue: number) => {
+          onChange={(_event, newValue: number) => {
             setTabValue(newValue);
             console.log("tab");
           }}

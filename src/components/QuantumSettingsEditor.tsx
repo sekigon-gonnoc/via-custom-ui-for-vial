@@ -1,6 +1,6 @@
-import { Tabs, Tab, Box, Button } from "@mui/material";
-import { ViaKeyboard } from "../services/vialKeyboad";
+import { Box, Button, Tab, Tabs } from "@mui/material";
 import { useEffect, useState } from "react";
+import { ViaKeyboard } from "../services/vialKeyboad";
 import { MenuSectionProperties, ViaMenuItem } from "./ViaMenuItem";
 
 const QuantumSettingDefinition = [
@@ -240,16 +240,16 @@ export function QuantumSettingsEditor(props: {
     <>
       <Tabs
         value={tabValue}
-        onChange={(event, value) => setTabValue(value)}
+        onChange={(_event, value) => setTabValue(value)}
         variant="scrollable"
         scrollButtons="auto"
       >
-        {QuantumSettingDefinition.map((menu, idx) => (
+        {QuantumSettingDefinition.map((menu) => (
           <Tab key={menu.label} label={menu.label}></Tab>
         ))}
       </Tabs>
 
-      {QuantumSettingDefinition.map((menu, idx) => (
+      {QuantumSettingDefinition.map((_menu, idx) => (
         <Box key={idx} hidden={tabValue !== idx}>
           <ViaMenuItem
             {...(QuantumSettingDefinition[idx] as MenuSectionProperties)}

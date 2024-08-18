@@ -1,9 +1,8 @@
-import React, { Fragment, useEffect, useMemo, useState } from "react";
+import { Box, Button, Grid, TextField } from "@mui/material";
+import { Fragment, useEffect, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
-import { KeycodeCatalog } from "./KeycodeCatalog";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
-import { Box, Button, FormControl, Grid, MenuItem, Select, TextField } from "@mui/material";
-import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
+import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
 
 export function TapDanceEditor(props: {
   via: ViaKeyboard;

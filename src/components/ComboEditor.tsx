@@ -1,8 +1,8 @@
 import { Box, Button, Grid } from "@mui/material";
+import { Fragment, useEffect, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
-import { Fragment, useEffect, useState } from "react";
-import { EditableKey, KeymapKeyPopUp, WIDTH_1U } from "./KeymapEditor";
+import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
 
 export function ComboEditor(props: {
   via: ViaKeyboard;
