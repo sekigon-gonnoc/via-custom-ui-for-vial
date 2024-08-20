@@ -17,7 +17,7 @@ export function ComboEditor(props: {
     navigator.locks.request("load-combo", async () => {
       if (props.comboIndex < 0) return;
 
-      const comboValue = await props.via.GetCombo(props.comboIndex);
+      const comboValue = (await props.via.GetCombo([props.comboIndex]))[0];
       const newCombo = { ...combo };
       newCombo[`${props.comboIndex}`] = {
         keys: [
@@ -34,14 +34,16 @@ export function ComboEditor(props: {
   }, [props.comboIndex, props.keycodeConverter]);
 
   const sendCombo = (id: number, combo: ComboValue) => {
-    props.via.SetCombo({
-      id: id,
-      key1: combo.keys[0].value,
-      key2: combo.keys[1].value,
-      key3: combo.keys[2].value,
-      key4: combo.keys[3].value,
-      output: combo.keys[4].value,
-    });
+    props.via.SetCombo([
+      {
+        id: id,
+        key1: combo.keys[0].value,
+        key2: combo.keys[1].value,
+        key3: combo.keys[2].value,
+        key4: combo.keys[3].value,
+        output: combo.keys[4].value,
+      },
+    ]);
   };
 
   return (

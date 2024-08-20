@@ -7,6 +7,14 @@ export interface VialDefinition {
   customKeycodes: { name: string; title: string; shortName: string }[];
 }
 
+export interface DynamicEntryCount {
+  layer: number;
+  macro: number;
+  tapdance: number;
+  combo: number;
+  override: number;
+}
+
 enum via_command_id {
   id_get_protocol_version = 0x01, // always 0x01
   id_get_keyboard_value = 0x02,
@@ -335,7 +343,7 @@ class VialKeyboard {
     };
   }
 
-  async GetDynamicEntryCountAll() {
+  async GetDynamicEntryCountAll(): DynamicEntryCount {
     const res = await this.BatchCommand([
       [
         via_command_id.id_vial,
@@ -453,94 +461,110 @@ class VialKeyboard {
     );
   }
 
-  async GetCombo(id: number) {
-    const res = await this.Command([
-      via_command_id.id_vial,
-      vial_command_id.vial_dynamic_entry_op,
-      dynamic_vial_id.dynamic_vial_combo_get,
-      id & 0xff,
-    ]);
+  async GetCombo(ids: number[]) {
+    const buffers = await this.BatchCommand(
+      ids.map((id) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_dynamic_entry_op,
+        dynamic_vial_id.dynamic_vial_combo_get,
+        id & 0xff,
+      ]),
+    );
 
-    return {
-      key1: res[1] | (res[2] << 8),
-      key2: res[3] | (res[4] << 8),
-      key3: res[5] | (res[6] << 8),
-      key4: res[7] | (res[8] << 8),
-      output: res[9] | (res[10] << 8),
-    };
+    return buffers.map((res) => {
+      return {
+        key1: res[1] | (res[2] << 8),
+        key2: res[3] | (res[4] << 8),
+        key3: res[5] | (res[6] << 8),
+        key4: res[7] | (res[8] << 8),
+        output: res[9] | (res[10] << 8),
+      };
+    });
   }
 
-  async SetCombo(value: {
-    id: number;
-    key1: number;
-    key2: number;
-    key3: number;
-    key4: number;
-    output: number;
-  }) {
-    await this.Command([
-      via_command_id.id_vial,
-      vial_command_id.vial_dynamic_entry_op,
-      dynamic_vial_id.dynamic_vial_combo_set,
-      value.id & 0xff,
-      value.key1 & 0xff,
-      (value.key1 >> 8) & 0xff,
-      value.key2 & 0xff,
-      (value.key2 >> 8) & 0xff,
-      value.key3 & 0xff,
-      (value.key3 >> 8) & 0xff,
-      value.key4 & 0xff,
-      (value.key4 >> 8) & 0xff,
-      value.output & 0xff,
-      (value.output >> 8) & 0xff,
-    ]);
+  async SetCombo(
+    values: {
+      id: number;
+      key1: number;
+      key2: number;
+      key3: number;
+      key4: number;
+      output: number;
+    }[],
+  ) {
+    await this.BatchCommand(
+      values.map((value) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_dynamic_entry_op,
+        dynamic_vial_id.dynamic_vial_combo_set,
+        value.id & 0xff,
+        value.key1 & 0xff,
+        (value.key1 >> 8) & 0xff,
+        value.key2 & 0xff,
+        (value.key2 >> 8) & 0xff,
+        value.key3 & 0xff,
+        (value.key3 >> 8) & 0xff,
+        value.key4 & 0xff,
+        (value.key4 >> 8) & 0xff,
+        value.output & 0xff,
+        (value.output >> 8) & 0xff,
+      ]),
+    );
   }
 
-  async GetOverride(id: number) {
-    const res = await this.Command([
-      via_command_id.id_vial,
-      vial_command_id.vial_dynamic_entry_op,
-      dynamic_vial_id.dynamic_vial_key_override_get,
-      id & 0xff,
-    ]);
+  async GetOverride(ids: number[]) {
+    const buffers = await this.BatchCommand(
+      ids.map((id) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_dynamic_entry_op,
+        dynamic_vial_id.dynamic_vial_key_override_get,
+        id & 0xff,
+      ]),
+    );
 
-    return {
-      trigger: res[1] | (res[2] << 8),
-      replacement: res[3] | (res[4] << 8),
-      layers: res[5] | (res[6] << 8),
-      triggerMods: res[7],
-      negativeModMask: res[8],
-      suppressedMods: res[9],
-      options: res[10],
-    };
+    return buffers.map((res) => {
+      return {
+        trigger: res[1] | (res[2] << 8),
+        replacement: res[3] | (res[4] << 8),
+        layers: res[5] | (res[6] << 8),
+        triggerMods: res[7],
+        negativeModMask: res[8],
+        suppressedMods: res[9],
+        options: res[10],
+      };
+    });
   }
 
-  async SetOverride(value: {
-    id: number;
-    trigger: number;
-    replacement: number;
-    layers: number;
-    triggerMods: number;
-    negativeModMask: number;
-    suppressedMods: number;
-    options: number;
-  }) {
-    await this.Command([
-      via_command_id.id_vial,
-      vial_command_id.vial_dynamic_entry_op,
-      dynamic_vial_id.dynamic_vial_key_override_set,
-      value.id & 0xff,
-      value.trigger & 0xff,
-      (value.trigger >> 8) & 0xff,
-      value.replacement & 0xff,
-      (value.replacement >> 8) & 0xff,
-      value.layers & 0xff,
-      (value.layers >> 8) & 0xff,
-      value.triggerMods & 0xff,
-      value.negativeModMask & 0xff,
-      value.suppressedMods & 0xff,
-      value.options & 0xff,
-    ]);
+  async SetOverride(
+    values: {
+      id: number;
+      trigger: number;
+      replacement: number;
+      layers: number;
+      triggerMods: number;
+      negativeModMask: number;
+      suppressedMods: number;
+      options: number;
+    }[],
+  ) {
+    await this.BatchCommand(
+      values.map((value) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_dynamic_entry_op,
+        dynamic_vial_id.dynamic_vial_key_override_set,
+        value.id & 0xff,
+        value.trigger & 0xff,
+        (value.trigger >> 8) & 0xff,
+        value.replacement & 0xff,
+        (value.replacement >> 8) & 0xff,
+        value.layers & 0xff,
+        (value.layers >> 8) & 0xff,
+        value.triggerMods & 0xff,
+        value.negativeModMask & 0xff,
+        value.suppressedMods & 0xff,
+        value.options & 0xff,
+      ]),
+    );
   }
 
   async GetQuantumSettingsValue(id: number[]): Promise<{ [id: number]: number }> {

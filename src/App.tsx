@@ -17,7 +17,6 @@ import * as Hjson from "hjson";
 import { useEffect, useRef, useState } from "react";
 import { match, P } from "ts-pattern";
 import "./App.css";
-import { KeycodeConverter, TapDance } from "./components/keycodes/keycodeConverter";
 import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
 import {
   QuantumSettingsEditor,
@@ -25,7 +24,12 @@ import {
 } from "./components/QuantumSettingsEditor";
 import { MenuItemProperties, MenuSectionProperties, ViaMenuItem } from "./components/ViaMenuItem";
 import init, { xz_decompress } from "./pkg";
-import { ViaKeyboard, VialDefinition } from "./services/vialKeyboad";
+import { DynamicEntryCount, ViaKeyboard, VialDefinition } from "./services/vialKeyboad";
+import {
+  VialKeyboardConfig,
+  VialKeyboardGetAllConfig,
+  VialKeyboardSetAllConfig,
+} from "./services/vialKeyboardConfig";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");
@@ -35,7 +39,7 @@ const via = new ViaKeyboard();
 
 function App() {
   const [vialJson, setVialJson] = useState<VialDefinition | undefined>(undefined);
-  const [dynamicEntryCount, setDynamicEntryCount] = useState({
+  const [dynamicEntryCount, setDynamicEntryCount] = useState<DynamicEntryCount>({
     layer: 0,
     macro: 0,
     tapdance: 0,
@@ -142,41 +146,9 @@ function App() {
   };
 
   const onVialSaveClick = async () => {
-    const keycodeConverter = new KeycodeConverter(
-      dynamicEntryCount.layer,
-      vialJson?.customKeycodes,
-      dynamicEntryCount.macro,
-      dynamicEntryCount.tapdance,
-    );
-
-    const encoderCount = vialJson?.layouts.keymap
-      .flatMap((row) => row.flatMap((col) => col.toString()))
-      .reduce(
-        (acc, key) => Math.max(acc, key.endsWith("e") ? parseInt(key.split(",")[0]) + 1 : acc),
-        0,
-      );
-
-    const layers: string[][] = [];
-    const encoders: string[][][] = [];
-    for (let layerIdx = 0; layerIdx < dynamicEntryCount.layer; layerIdx++) {
-      const layerBuffer = await via.GetLayer(layerIdx, vialJson?.matrix ?? { rows: 0, cols: 0 });
-      layers.push(layerBuffer.map((keycode) => keycodeConverter.convertIntToKeycode(keycode).key));
-      if (encoderCount) {
-        const encoderBuffer = await via.GetEncoder(layerIdx, encoderCount);
-        encoders.push(
-          encoderBuffer.map((encoder) =>
-            encoder.map((k) => keycodeConverter.convertIntToKeycode(k).key),
-          ),
-        );
-      }
-    }
-
-    const tapdance = await via.GetTapDance(
-      [...Array(dynamicEntryCount.tapdance)].map((_, idx) => idx),
-    );
-
+    if (vialJson === undefined) return;
     downloadData(
-      JSON.stringify({ layers: layers, encoders: encoders, tapdance: tapdance }, null, 4),
+      JSON.stringify(await VialKeyboardGetAllConfig(via, vialJson, dynamicEntryCount), null, 4),
       `${kbName}-vial-setting.json`,
     );
   };
@@ -187,58 +159,13 @@ function App() {
 
   const onVialJsonUploaded = async (json: string) => {
     try {
-      const parsedJson = Hjson.parse(json) as {
-        layers: string[][];
-        encoders: string[][][];
-        tapdance: TapDance[];
-      };
-
-      const keycodeConverter = new KeycodeConverter(
-        dynamicEntryCount.layer,
-        vialJson?.customKeycodes,
-        dynamicEntryCount.macro,
-        dynamicEntryCount.tapdance,
-      );
-
-      const qmkKeycodes = [...Array(0xffff)].map((_, idx) =>
-        keycodeConverter.convertIntToKeycode(idx),
-      );
-
-      const keycodes = parsedJson.layers.map((layer) =>
-        layer.map((key) => qmkKeycodes.find((q) => key === q.key)?.value ?? 0),
-      );
-
-      for (let layerIdx = 0; layerIdx < dynamicEntryCount.layer; layerIdx++) {
-        await via.SetLayer(layerIdx, keycodes[layerIdx], vialJson!.matrix);
+      if (vialJson === undefined) return;
+      const parsedJson = Hjson.parse(json) as VialKeyboardConfig;
+      try {
+        VialKeyboardSetAllConfig(via, parsedJson, vialJson, dynamicEntryCount);
+      } catch (e) {
+        console.error(e);
       }
-
-      parsedJson.encoders
-        .map((layer) =>
-          layer.map((encoder) =>
-            encoder.map((key) => qmkKeycodes.find((q) => key === q.key)?.value ?? 0),
-          ),
-        )
-        .flatMap((layer, layerIdx) =>
-          layer.flatMap((encoder, encoderIdx) => {
-            return [
-              { layer: layerIdx, index: encoderIdx, direction: 0, keycode: encoder[0] },
-              { layer: layerIdx, index: encoderIdx, direction: 1, keycode: encoder[1] },
-            ];
-          }),
-        );
-
-      await via.SetTapDance(
-        parsedJson.tapdance.map((td, id) => {
-          return {
-            id: id,
-            onTap: td.onTap.value,
-            onHold: td.onHold.value,
-            onDoubleTap: td.onDoubleTap.value,
-            onTapHold: td.onTapHold.value,
-            tappingTerm: td.tappingTerm,
-          };
-        }),
-      );
 
       setVialJson({ ...vialJson! });
     } catch (error) {

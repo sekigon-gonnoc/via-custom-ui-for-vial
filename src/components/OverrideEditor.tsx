@@ -17,7 +17,7 @@ export function OverrideEditor(props: {
     navigator.locks.request("load-override", async () => {
       if (props.overrideIndex < 0) return;
 
-      const overrideValue = await props.via.GetOverride(props.overrideIndex);
+      const overrideValue = (await props.via.GetOverride([props.overrideIndex]))[0];
       const newOverride = { ...override };
       newOverride[`${props.overrideIndex}`] = {
         ...overrideValue,
@@ -30,12 +30,14 @@ export function OverrideEditor(props: {
   }, [props.overrideIndex, props.keycodeConverter]);
 
   const sendOverride = (id: number, value: OverrideValue) => {
-    props.via.SetOverride({
-      ...value,
-      id: id,
-      trigger: value.trigger.value,
-      replacement: value.replacement.value,
-    });
+    props.via.SetOverride([
+      {
+        ...value,
+        id: id,
+        trigger: value.trigger.value,
+        replacement: value.replacement.value,
+      },
+    ]);
   };
 
   return (

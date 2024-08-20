@@ -29,6 +29,24 @@ export type TapDance = {
   tappingTerm: number;
 };
 
+export type Combo = {
+  key1: QmkKeycode;
+  key2: QmkKeycode;
+  key3: QmkKeycode;
+  key4: QmkKeycode;
+  output: QmkKeycode;
+};
+
+export type Override = {
+  trigger: QmkKeycode;
+  replacement: QmkKeycode;
+  layers: number;
+  triggerMods: number;
+  negativeModMask: number;
+  suppressedMods: number;
+  options: number;
+};
+
 export enum ModifierBit {
   Ctrl = 1 << 0,
   Shift = 1 << 1,
@@ -351,6 +369,38 @@ export class KeycodeConverter {
       onDoubleTap: this.convertIntToKeycode(td.onTap),
       onTapHold: this.convertIntToKeycode(td.onTap),
       tappingTerm: td.tappingTerm,
+    };
+  }
+
+  public convertCombo(combo: {
+    key1: number;
+    key2: number;
+    key3: number;
+    key4: number;
+    output: number;
+  }): Combo {
+    return {
+      key1: this.convertIntToKeycode(combo.key1),
+      key2: this.convertIntToKeycode(combo.key2),
+      key3: this.convertIntToKeycode(combo.key3),
+      key4: this.convertIntToKeycode(combo.key4),
+      output: this.convertIntToKeycode(combo.output),
+    };
+  }
+
+  public convertOverride(override: {
+    trigger: number;
+    replacement: number;
+    layers: number;
+    triggerMods: number;
+    negativeModMask: number;
+    suppressedMods: number;
+    options: number;
+  }): Override {
+    return {
+      ...override,
+      trigger: this.convertIntToKeycode(override.trigger),
+      replacement: this.convertIntToKeycode(override.replacement),
     };
   }
 }
