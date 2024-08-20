@@ -563,13 +563,12 @@ function LayerEditor(props: {
       const layout = await props.via.GetLayoutOption();
       setLayoutOption({ 0: layout });
       setLayer(0);
-      if (!Object.keys(keymap).includes("0")) {
-        const layerKeys = await props.via.GetLayer(0, {
-          row: props.keymap.matrix.rows,
-          col: props.keymap.matrix.cols,
-        });
-        setKeymap({ ...keymap, 0: layerKeys });
-      }
+
+      const layerKeys = await props.via.GetLayer(0, {
+        rows: props.keymap.matrix.rows,
+        cols: props.keymap.matrix.cols,
+      });
+      setKeymap({ 0: layerKeys });
 
       const encoderCount = props.keymap.layouts.keymap
         .flatMap((row) => row.flatMap((col) => col.toString()))
@@ -587,7 +586,7 @@ function LayerEditor(props: {
   };
 
   const sendEncoder = async (layer: number, index: number, direction: number, keycode: number) => {
-    await props.via.SetEncoder(layer, index, direction, keycode);
+    await props.via.SetEncoder([{ layer, index, direction, keycode }]);
   };
 
   const sendLayout = async (layout: number) => {
@@ -611,8 +610,8 @@ function LayerEditor(props: {
           onChange={async (layer) => {
             if (!Object.keys(keymap).includes(layer.toString())) {
               const layerKeys = await props.via.GetLayer(layer, {
-                row: props.keymap.matrix.rows,
-                col: props.keymap.matrix.cols,
+                rows: props.keymap.matrix.rows,
+                cols: props.keymap.matrix.cols,
               });
               const newKeymap = { ...keymap };
               newKeymap[layer] = layerKeys;
@@ -669,6 +668,7 @@ export function KeymapEditor(props: {
   keymap: KeymapProperties;
   via: ViaKeyboard;
   dynamicEntryCount: {
+    layer: number;
     macro: number;
     tapdance: number;
     combo: number;
@@ -678,34 +678,26 @@ export function KeymapEditor(props: {
   const [menuType, setMenuType] = useState<"layer" | "tapdance" | "macro" | "combo" | "override">(
     "layer",
   );
-  const [layerCount, setLayerCount] = useState(1);
   const [tdIndex, setTdIndex] = useState(-1);
   const [macroIndex, setMacroIndex] = useState(-1);
   const [comboIndex, setComboIndex] = useState(-1);
   const [overrideIndex, setOverrideIndex] = useState(-1);
 
-  useEffect(() => {
-    navigator.locks.request("load-layout", async () => {
-      const layerCount = await props.via.GetLayerCount();
-      setLayerCount(layerCount);
-    });
-  }, [props.via, props.keymap]);
-
   const keycodeConverter = useMemo(() => {
     return new KeycodeConverter(
-      layerCount,
+      props.dynamicEntryCount.layer,
       props.keymap.customKeycodes,
       props.dynamicEntryCount.macro,
       props.dynamicEntryCount.tapdance,
     );
-  }, [layerCount, props.keymap.customKeycodes, props.dynamicEntryCount]);
+  }, [props.dynamicEntryCount.layer, props.keymap.customKeycodes, props.dynamicEntryCount]);
 
   return (
     <>
       <Box hidden={menuType !== "layer"}>
         <LayerEditor
           {...props}
-          layerCount={layerCount}
+          layerCount={props.dynamicEntryCount.layer}
           keycodeConverter={keycodeConverter}
         ></LayerEditor>
       </Box>

@@ -1,5 +1,12 @@
 import { WebRawHID } from "./webRawHID";
 
+export interface VialDefinition {
+  name: string;
+  matrix: { rows: number; cols: number };
+  layouts: { keymap: string[][] };
+  customKeycodes: { name: string; title: string; shortName: string }[];
+}
+
 enum via_command_id {
   id_get_protocol_version = 0x01, // always 0x01
   id_get_keyboard_value = 0x02,
@@ -155,7 +162,7 @@ class VialKeyboard {
 
       this.hid.setReceiveCallback(this.receiveCallback.bind(this));
 
-      console.log(res)
+      console.log(res);
 
       return res;
     });
@@ -218,9 +225,9 @@ class VialKeyboard {
 
   async GetLayer(
     layer: number,
-    matrix_definition: { row: number; col: number },
+    matrix_definition: { rows: number; cols: number },
   ): Promise<number[]> {
-    const matrix_len = matrix_definition.row * matrix_definition.col * 2; // 2byte per key
+    const matrix_len = matrix_definition.rows * matrix_definition.cols * 2; // 2byte per key
     const start = layer * matrix_len;
 
     const pageLen = 28;
@@ -246,6 +253,33 @@ class VialKeyboard {
         }
         return p;
       }, []);
+  }
+
+  async SetLayer(
+    layer: number,
+    keycodes: number[],
+    matrix_definition: { rows: number; cols: number },
+  ) {
+    const matrix_len = matrix_definition.rows * matrix_definition.cols * 2; // 2byte per key
+    const start = layer * matrix_len;
+
+    const pageLen = 28;
+    const pageCount = Math.ceil((keycodes.length * 2) / pageLen);
+    await this.BatchCommand(
+      [...Array(pageCount)].map((_, idx) => {
+        const keycodesBuffer = keycodes
+          .slice(idx * (pageLen / 2), (idx + 1) * (pageLen / 2))
+          .map((k) => [k >> 8, k & 0xff])
+          .flat();
+        return [
+          via_command_id.id_dynamic_keymap_set_buffer,
+          ((start + idx * pageLen) >> 8) & 0xff,
+          (start + idx * pageLen) & 0xff,
+          keycodesBuffer.length,
+          ...keycodesBuffer,
+        ];
+      }),
+    );
   }
 
   async SetKeycode(layer: number, row: number, col: number, keycode: number) {
@@ -274,16 +308,18 @@ class VialKeyboard {
     return encoder;
   }
 
-  async SetEncoder(layer: number, encoder: number, direction: number, keycode: number) {
-    await this.Command([
-      via_command_id.id_vial,
-      vial_command_id.vial_set_encoder,
-      layer & 0xff,
-      encoder & 0xff,
-      direction & 0xff,
-      (keycode >> 8) & 0xff,
-      keycode & 0xff,
-    ]);
+  async SetEncoder(values: { layer: number; index: number; direction: number; keycode: number }[]) {
+    await this.BatchCommand(
+      values.map((value) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_set_encoder,
+        value.layer & 0xff,
+        value.index & 0xff,
+        value.direction & 0xff,
+        (value.keycode >> 8) & 0xff,
+        value.keycode & 0xff,
+      ]),
+    );
   }
 
   async GetDynamicEntryCount() {
@@ -299,55 +335,82 @@ class VialKeyboard {
     };
   }
 
-  async GetTapDance(id: number) {
-    const res = await this.Command([
-      via_command_id.id_vial,
-      vial_command_id.vial_dynamic_entry_op,
-      dynamic_vial_id.dynamic_vial_tap_dance_get,
-      id & 0xff,
+  async GetDynamicEntryCountAll() {
+    const res = await this.BatchCommand([
+      [
+        via_command_id.id_vial,
+        vial_command_id.vial_dynamic_entry_op,
+        dynamic_vial_id.dynamic_vial_get_number_of_entries,
+      ],
+      [via_command_id.id_dynamic_keymap_get_layer_count],
+      [via_command_id.id_dynamic_keymap_macro_get_count],
     ]);
-
-    return res[0] == 0
-      ? {
-          onTap: res[1] | (res[2] << 8),
-          onHold: res[3] | (res[4] << 8),
-          onDoubleTap: res[5] | (res[6] << 8),
-          onTapHold: res[7] | (res[8] << 8),
-          tappingTerm: res[9] | (res[10] << 8),
-        }
-      : {
-          onTap: 0,
-          onHold: 0,
-          onDoubleTap: 0,
-          onTapHold: 0,
-          tappingTerm: 0,
-        };
+    return {
+      tapdance: res[0][0],
+      combo: res[0][1],
+      override: res[0][2],
+      layer: res[1][1],
+      macro: res[2][1],
+    };
   }
 
-  async SetTapDance(value: {
-    id: number;
-    onTap: number;
-    onHold: number;
-    onDoubleTap: number;
-    onTapHold: number;
-    tappingTerm: number;
-  }) {
-    this.Command([
-      via_command_id.id_vial,
-      vial_command_id.vial_dynamic_entry_op,
-      dynamic_vial_id.dynamic_vial_tap_dance_set,
-      value.id & 0xff,
-      value.onTap & 0xff,
-      (value.onTap >> 8) & 0xff,
-      value.onHold & 0xff,
-      (value.onHold >> 8) & 0xff,
-      value.onDoubleTap & 0xff,
-      (value.onDoubleTap >> 8) & 0xff,
-      value.onTapHold & 0xff,
-      (value.onTapHold >> 8) & 0xff,
-      value.tappingTerm & 0xff,
-      (value.tappingTerm >> 8) & 0xff,
-    ]);
+  async GetTapDance(ids: number[]) {
+    const buffers = await this.BatchCommand(
+      ids.map((_, id) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_dynamic_entry_op,
+        dynamic_vial_id.dynamic_vial_tap_dance_get,
+        id & 0xff,
+      ]),
+    );
+
+    return buffers.map((res) => {
+      return res[0] == 0
+        ? {
+            onTap: res[1] | (res[2] << 8),
+            onHold: res[3] | (res[4] << 8),
+            onDoubleTap: res[5] | (res[6] << 8),
+            onTapHold: res[7] | (res[8] << 8),
+            tappingTerm: res[9] | (res[10] << 8),
+          }
+        : {
+            onTap: 0,
+            onHold: 0,
+            onDoubleTap: 0,
+            onTapHold: 0,
+            tappingTerm: 0,
+          };
+    });
+  }
+
+  async SetTapDance(
+    values: {
+      id: number;
+      onTap: number;
+      onHold: number;
+      onDoubleTap: number;
+      onTapHold: number;
+      tappingTerm: number;
+    }[],
+  ) {
+    this.BatchCommand(
+      values.map((value) => [
+        via_command_id.id_vial,
+        vial_command_id.vial_dynamic_entry_op,
+        dynamic_vial_id.dynamic_vial_tap_dance_set,
+        value.id & 0xff,
+        value.onTap & 0xff,
+        (value.onTap >> 8) & 0xff,
+        value.onHold & 0xff,
+        (value.onHold >> 8) & 0xff,
+        value.onDoubleTap & 0xff,
+        (value.onDoubleTap >> 8) & 0xff,
+        value.onTapHold & 0xff,
+        (value.onTapHold >> 8) & 0xff,
+        value.tappingTerm & 0xff,
+        (value.tappingTerm >> 8) & 0xff,
+      ]),
+    );
   }
 
   async GetMacroCount() {

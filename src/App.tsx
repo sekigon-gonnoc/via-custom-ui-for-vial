@@ -1,31 +1,31 @@
-import { useEffect, useState, useRef } from "react";
-import init, { xz_decompress } from "./pkg";
-import { ViaKeyboard } from "./services/vialKeyboad";
-import * as Hjson from "hjson";
-import { ViaMenuItem, MenuSectionProperties } from "./components/ViaMenuItem";
 import {
+  Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
   Divider,
+  Grid,
+  Link,
   List,
   ListItemButton,
   ListItemText,
-  Toolbar,
-  Grid,
   ListSubheader,
-  Link,
-  Dialog,
-  DialogContent,
-  DialogActions,
-  Box,
+  Toolbar,
 } from "@mui/material";
-import { MenuItemProperties } from "./components/ViaMenuItem";
-import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
+import * as Hjson from "hjson";
+import { useEffect, useRef, useState } from "react";
 import { match, P } from "ts-pattern";
+import "./App.css";
+import { KeycodeConverter, TapDance } from "./components/keycodes/keycodeConverter";
+import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
 import {
   QuantumSettingsEditor,
   QuantumSettingsSaveButton,
 } from "./components/QuantumSettingsEditor";
-import "./App.css";
+import { MenuItemProperties, MenuSectionProperties, ViaMenuItem } from "./components/ViaMenuItem";
+import init, { xz_decompress } from "./pkg";
+import { ViaKeyboard, VialDefinition } from "./services/vialKeyboad";
 
 if (!(navigator as any).hid) {
   alert("Please use chrome/edge");
@@ -34,8 +34,9 @@ if (!(navigator as any).hid) {
 const via = new ViaKeyboard();
 
 function App() {
-  const [vialJson, setVialJson] = useState<any>(undefined);
+  const [vialJson, setVialJson] = useState<VialDefinition | undefined>(undefined);
   const [dynamicEntryCount, setDynamicEntryCount] = useState({
+    layer: 0,
     macro: 0,
     tapdance: 0,
     combo: 0,
@@ -61,7 +62,8 @@ function App() {
   const [kbName, setKbName] = useState("");
   const [customEraseDialogOpen, setCustomEraseDialogOpen] = useState(false);
   const [quantumEraseDialogOpen, setQuantumEraseDialogOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const customFileInputRef = useRef<HTMLInputElement>(null);
+  const vialFileInputRef = useRef<HTMLInputElement>(null);
   const [quantumValues, setQuantumValues] = useState<{ [id: string]: number }>({});
 
   useEffect(() => {
@@ -116,9 +118,8 @@ function App() {
     setCustomMenus(parsed?.menus ?? []);
     setKbName(parsed?.name ?? via.GetHidName());
 
-    const dynamicEntryCount = await via.GetDynamicEntryCount();
-    const macroCount = await via.GetMacroCount();
-    setDynamicEntryCount({ macro: macroCount, ...dynamicEntryCount });
+    const dynamicEntryCount = await via.GetDynamicEntryCountAll();
+    setDynamicEntryCount(dynamicEntryCount);
 
     const customValueId = (parsed.menus as MenuItemProperties[]).flatMap((top) =>
       top.content.reduce((prev: [string, number, number, number?][], section) => {
@@ -140,7 +141,113 @@ function App() {
     getCustomValues(customValueId);
   };
 
-  const onSaveClick = async () => {
+  const onVialSaveClick = async () => {
+    const keycodeConverter = new KeycodeConverter(
+      dynamicEntryCount.layer,
+      vialJson?.customKeycodes,
+      dynamicEntryCount.macro,
+      dynamicEntryCount.tapdance,
+    );
+
+    const encoderCount = vialJson?.layouts.keymap
+      .flatMap((row) => row.flatMap((col) => col.toString()))
+      .reduce(
+        (acc, key) => Math.max(acc, key.endsWith("e") ? parseInt(key.split(",")[0]) + 1 : acc),
+        0,
+      );
+
+    const layers: string[][] = [];
+    const encoders: string[][][] = [];
+    for (let layerIdx = 0; layerIdx < dynamicEntryCount.layer; layerIdx++) {
+      const layerBuffer = await via.GetLayer(layerIdx, vialJson?.matrix ?? { rows: 0, cols: 0 });
+      layers.push(layerBuffer.map((keycode) => keycodeConverter.convertIntToKeycode(keycode).key));
+      if (encoderCount) {
+        const encoderBuffer = await via.GetEncoder(layerIdx, encoderCount);
+        encoders.push(
+          encoderBuffer.map((encoder) =>
+            encoder.map((k) => keycodeConverter.convertIntToKeycode(k).key),
+          ),
+        );
+      }
+    }
+
+    const tapdance = await via.GetTapDance(
+      [...Array(dynamicEntryCount.tapdance)].map((_, idx) => idx),
+    );
+
+    downloadData(
+      JSON.stringify({ layers: layers, encoders: encoders, tapdance: tapdance }, null, 4),
+      `${kbName}-vial-setting.json`,
+    );
+  };
+
+  const onVialUploadJsonClick = async () => {
+    vialFileInputRef.current?.click();
+  };
+
+  const onVialJsonUploaded = async (json: string) => {
+    try {
+      const parsedJson = Hjson.parse(json) as {
+        layers: string[][];
+        encoders: string[][][];
+        tapdance: TapDance[];
+      };
+
+      const keycodeConverter = new KeycodeConverter(
+        dynamicEntryCount.layer,
+        vialJson?.customKeycodes,
+        dynamicEntryCount.macro,
+        dynamicEntryCount.tapdance,
+      );
+
+      const qmkKeycodes = [...Array(0xffff)].map((_, idx) =>
+        keycodeConverter.convertIntToKeycode(idx),
+      );
+
+      const keycodes = parsedJson.layers.map((layer) =>
+        layer.map((key) => qmkKeycodes.find((q) => key === q.key)?.value ?? 0),
+      );
+
+      for (let layerIdx = 0; layerIdx < dynamicEntryCount.layer; layerIdx++) {
+        await via.SetLayer(layerIdx, keycodes[layerIdx], vialJson!.matrix);
+      }
+
+      parsedJson.encoders
+        .map((layer) =>
+          layer.map((encoder) =>
+            encoder.map((key) => qmkKeycodes.find((q) => key === q.key)?.value ?? 0),
+          ),
+        )
+        .flatMap((layer, layerIdx) =>
+          layer.flatMap((encoder, encoderIdx) => {
+            return [
+              { layer: layerIdx, index: encoderIdx, direction: 0, keycode: encoder[0] },
+              { layer: layerIdx, index: encoderIdx, direction: 1, keycode: encoder[1] },
+            ];
+          }),
+        );
+
+      await via.SetTapDance(
+        parsedJson.tapdance.map((td, id) => {
+          return {
+            id: id,
+            onTap: td.onTap.value,
+            onHold: td.onHold.value,
+            onDoubleTap: td.onDoubleTap.value,
+            onTapHold: td.onTapHold.value,
+            tappingTerm: td.tappingTerm,
+          };
+        }),
+      );
+
+      setVialJson({ ...vialJson! });
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+      alert("Invalid JSON file.");
+    }
+  };
+
+  const onCustomSaveClick = async () => {
     for (const element of customValueId) {
       await via.SetCustomValue(element.slice(1) as number[], customValues[element[0]]);
       await via.SaveCustomValue(element.slice(1) as number[]);
@@ -149,7 +256,7 @@ function App() {
     getCustomValues(customValueId);
   };
 
-  const onEraseClick = async () => {
+  const onCustomEraseClick = async () => {
     setCustomEraseDialogOpen(true);
   };
 
@@ -178,27 +285,33 @@ function App() {
   };
 
   const onUploadJsonClick = async () => {
-    fileInputRef.current?.click();
+    customFileInputRef.current?.click();
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onCustomJsonUploaded = async (json: string) => {
+    try {
+      const parsedJson = Hjson.parse(json);
+      console.log(parsedJson);
+      const loadedCustomValues = { ...customValues, ...parsedJson };
+      setCustomValues(loadedCustomValues);
+      for (const element of customValueId) {
+        await via.SetCustomValue(element.slice(1) as number[], loadedCustomValues[element[0]]);
+      }
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+      alert("Invalid JSON file.");
+    }
+  };
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    handler: (json: string) => void,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = async (e) => {
-        try {
-          const result = e.target?.result as string;
-          const parsedJson = Hjson.parse(result);
-          console.log(parsedJson);
-          const loadedCustomValues = { ...customValues, ...parsedJson };
-          setCustomValues(loadedCustomValues);
-          for (const element of customValueId) {
-            await via.SetCustomValue(element.slice(1) as number[], loadedCustomValues[element[0]]);
-          }
-        } catch (error) {
-          console.error("Error parsing JSON:", error);
-          alert("Invalid JSON file.");
-        }
+        handler(e.target?.result as string);
       };
       reader.readAsText(file);
     }
@@ -228,6 +341,43 @@ function App() {
                   <ListItemText primary="Keymap" />
                 </ListItemButton>
               </List>
+              <Grid container rowSpacing={1} columnSpacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Button
+                    sx={{
+                      width: "100%",
+                      ml: 1,
+                      mb: 1,
+                    }}
+                    variant="contained"
+                    color="primary"
+                    onClick={onVialSaveClick}
+                  >
+                    DL json
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Button
+                    sx={{
+                      width: "100%",
+                    }}
+                    variant="contained"
+                    color="primary"
+                    onClick={onVialUploadJsonClick}
+                  >
+                    UP json
+                  </Button>
+                </Grid>
+              </Grid>
+              <input
+                type="file"
+                accept=".json"
+                ref={vialFileInputRef}
+                style={{ display: "none" }}
+                onChange={(event) => {
+                  handleFileChange(event, onVialJsonUploaded);
+                }}
+              />
             </div>
             <Divider />
             <div style={{ display: connected ? "block" : "none" }}>
@@ -296,7 +446,7 @@ function App() {
                   }}
                   variant="contained"
                   color="primary"
-                  onClick={onSaveClick}
+                  onClick={onCustomSaveClick}
                 >
                   Save
                 </Button>
@@ -308,7 +458,7 @@ function App() {
                   }}
                   variant="contained"
                   color="error"
-                  onClick={onEraseClick}
+                  onClick={onCustomEraseClick}
                 >
                   Erase
                 </Button>
@@ -341,9 +491,11 @@ function App() {
                 <input
                   type="file"
                   accept=".json"
-                  ref={fileInputRef}
+                  ref={customFileInputRef}
                   style={{ display: "none" }}
-                  onChange={handleFileChange}
+                  onChange={(event) => {
+                    handleFileChange(event, onCustomJsonUploaded);
+                  }}
                 />
               </Grid>
             </Grid>

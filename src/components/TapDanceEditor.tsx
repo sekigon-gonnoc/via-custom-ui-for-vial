@@ -15,28 +15,24 @@ export function TapDanceEditor(props: {
   useEffect(() => {
     navigator.locks.request("load-tapdance", async () => {
       if (props.tapdanceIndex < 0) return;
-      const td = await props.via.GetTapDance(props.tapdanceIndex);
+      const td = (await props.via.GetTapDance([props.tapdanceIndex]))[0];
       const newTapDance = { ...tapDance };
-      newTapDance[`${props.tapdanceIndex}`] = {
-        onTap: props.keycodeConverter.convertIntToKeycode(td.onTap),
-        onHold: props.keycodeConverter.convertIntToKeycode(td.onHold),
-        onDoubleTap: props.keycodeConverter.convertIntToKeycode(td.onDoubleTap),
-        onTapHold: props.keycodeConverter.convertIntToKeycode(td.onTapHold),
-        tappingTerm: td.tappingTerm,
-      };
+      newTapDance[`${props.tapdanceIndex}`] = props.keycodeConverter.convertTapDance(td);
       setTapDance(newTapDance);
     });
   }, [props.tapdanceIndex, props.keycodeConverter]);
 
   const sendTapdance = (id: number, value: TapDanceValue) => {
-    props.via.SetTapDance({
-      id: id,
-      onTap: value.onTap.value,
-      onHold: value.onHold.value,
-      onDoubleTap: value.onDoubleTap.value,
-      onTapHold: value.onTapHold.value,
-      tappingTerm: value.tappingTerm,
-    });
+    props.via.SetTapDance([
+      {
+        id: id,
+        onTap: value.onTap.value,
+        onHold: value.onHold.value,
+        onDoubleTap: value.onDoubleTap.value,
+        onTapHold: value.onTapHold.value,
+        tappingTerm: value.tappingTerm,
+      },
+    ]);
   };
 
   return (

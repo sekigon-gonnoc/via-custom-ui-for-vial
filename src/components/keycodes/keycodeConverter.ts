@@ -1,6 +1,6 @@
 import { match, P } from "ts-pattern";
-import keycodes_0_0_3 from "./0.0.3/keycodes.json";
 import keycode_override_0_0_3 from "./0.0.3/keycode_override.json";
+import keycodes_0_0_3 from "./0.0.3/keycodes.json";
 import quantum_keycode_range_0_0_3 from "./0.0.3/quantum_keycode_range.json";
 
 const keycodes: {
@@ -19,6 +19,14 @@ export type QmkKeycode = {
   tap?: number;
   modLabel?: string;
   holdLabel?: string;
+};
+
+export type TapDance = {
+  onTap: QmkKeycode;
+  onHold: QmkKeycode;
+  onDoubleTap: QmkKeycode;
+  onTapHold: QmkKeycode;
+  tappingTerm: number;
 };
 
 export enum ModifierBit {
@@ -43,7 +51,7 @@ const ModTapKeycodeBase: QmkKeycode = {
   key: "MOD_TAP(kc)",
 };
 
-function modString(mod: number) {
+function modStringShort(mod: number) {
   const MOD = ["C", "S", "A", "G"];
   const activeMod = [];
   for (let b = 0; b < 4; b++) {
@@ -53,6 +61,20 @@ function modString(mod: number) {
   }
 
   return mod & 0x10 ? `${activeMod.join("+")}*` : `*${activeMod.join("+")}`;
+}
+
+function modStringLong(mod: number) {
+  const MOD = ["CTL", "SFT", "ALT", "GUI"];
+  const activeMod = [];
+  for (let b = 0; b < 4; b++) {
+    if (mod & (1 << b)) {
+      activeMod.push(MOD[b]);
+    }
+  }
+
+  return mod & 0x10
+    ? `${activeMod.map((m) => `MOD_R${m}`).join("|")}`
+    : `${activeMod.map((m) => `MOD_L${m}`).join("|")}`;
 }
 
 export class KeycodeConverter {
@@ -265,35 +287,42 @@ export class KeycodeConverter {
     } else {
       return match(value)
         .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
+          const modLabel = modStringShort((val >> 8) & 0x1f);
+          const modLongLabel = modStringLong((val >> 8) & 0x1f);
+          const baseKeycode = this.convertIntToKeycode(val & 0xff);
           return {
             value: val,
-            key: "mods",
-            modLabel: modString((val >> 8) & 0x1f),
-            label: this.convertIntToKeycode(val & 0xff).label,
+            key: `MODS(${modLongLabel},${baseKeycode.key})`,
+            modLabel: modLabel,
+            label: baseKeycode.label,
           };
         })
         .with(
           P.number.between(keycode_range.QK_MOD_TAP.start, keycode_range.QK_MOD_TAP.end),
           (val) => {
+            const modLabel = modStringShort((val >> 8) & 0x1f);
+            const modLongLabel = modStringLong((val >> 8) & 0x1f);
+            const baseKeycode = this.convertIntToKeycode(val & 0xff);
             return {
               value: val,
-              key: "modTap",
-              holdLabel: modString((val >> 8) & 0x1f),
+              key: `MOD_TAP(${modLongLabel},${baseKeycode.key})`,
+              holdLabel: modLabel,
               tap: val & 0xff,
-              label: this.convertIntToKeycode(val & 0xff).label,
+              label: baseKeycode.label,
             };
           },
         )
         .with(
           P.number.between(keycode_range.QK_LAYER_TAP.start, keycode_range.QK_LAYER_TAP.end),
           (val) => {
+            const baseKeycode = this.convertIntToKeycode(val & 0xff);
             return {
               value: val,
-              key: "layerTap",
+              key: `LT(${(val >> 8) & 0xf},${baseKeycode.key})`,
               hold: val >> 8,
               holdLabel: `Layer${(val >> 8) & 0xf}`,
               tap: val & 0xff,
-              label: this.convertIntToKeycode(val & 0xff).label,
+              label: baseKeycode.label,
             };
           },
         )
@@ -307,5 +336,21 @@ export class KeycodeConverter {
         })
         .exhaustive();
     }
+  }
+
+  public convertTapDance(td: {
+    onTap: number;
+    onHold: number;
+    onDoubleTap: number;
+    onTapHold: number;
+    tappingTerm: number;
+  }): TapDance {
+    return {
+      onTap: this.convertIntToKeycode(td.onTap),
+      onHold: this.convertIntToKeycode(td.onTap),
+      onDoubleTap: this.convertIntToKeycode(td.onTap),
+      onTapHold: this.convertIntToKeycode(td.onTap),
+      tappingTerm: td.tappingTerm,
+    };
   }
 }
