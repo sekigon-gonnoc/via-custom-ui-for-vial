@@ -4,12 +4,14 @@ import { DynamicEntryCount, ViaKeyboard, VialDefinition } from "./vialKeyboad";
 
 export type VialKeyboardConfig = {
   version: number;
+  name: string;
   uid: bigint;
   layout: string[][][];
   encoder_layout: string[][][];
   via_protocol: number;
   vial_protocol: number;
   layout_options: number;
+  macro: (string | number)[][][];
   tap_dance: TapDanceConfig[];
   combo: ComboConfig[];
   key_override: OverrideConfig[];
@@ -44,6 +46,7 @@ export async function VialKeyboardGetAllConfig(
 
   const viaProtocol = await via.GetProtocolVersion();
   const keyboardId = await via.GetVialKeyboardId();
+  const layoutOption = await via.GetLayoutOption();
 
   const encoderCount = vialJson?.layouts.keymap
     .flatMap((row) => row.flatMap((col) => col.toString()))
@@ -108,13 +111,59 @@ export async function VialKeyboardGetAllConfig(
 
   const quantum = await QuantumSettingsReadAll(via);
 
+  const macro = (await via.GetMacros(dynamicEntryCount.macro)).map((buffer) => {
+    const newActions: (number | string)[][] = [];
+    let idx = 0;
+    while (idx < buffer.length) {
+      if (buffer[idx] == 1) {
+        idx += 1;
+        if (1 <= buffer[idx] && buffer[idx] <= 3) {
+          const keycode = buffer[idx + 1];
+          newActions.push([]);
+          newActions[newActions.length - 1].push(
+            ["tap", "down", "up"][buffer[idx] - 1],
+            keycodeConverter.convertIntToKeycode(keycode).key,
+          );
+          idx += 2;
+        } else if (buffer[idx] == 4) {
+          const delay = buffer[idx + 1] - 1 + (buffer[idx + 2] - 1) * 255;
+          newActions.push([]);
+          newActions[newActions.length - 1].push("delay", delay);
+          idx += 3;
+        } else if (5 <= buffer[idx] && buffer[idx] <= 7) {
+          const keycode = buffer[idx + 1] | (buffer[idx + 2] << 8);
+          newActions.push([]);
+          newActions[newActions.length - 1].push(
+            ["tap", "down", "up"][buffer[idx] - 5],
+            keycodeConverter.convertIntToKeycode(keycode).key,
+          );
+          idx += 3;
+        }
+      } else {
+        if ((newActions[newActions.length - 1]?.length ?? 0) === 0) {
+          newActions.push([]);
+          newActions[newActions.length - 1].push("text");
+          newActions[newActions.length - 1].push("");
+        }
+        newActions[newActions.length - 1][1] += new TextDecoder().decode(
+          Uint8Array.from([buffer[idx]]),
+        );
+
+        idx += 1;
+      }
+    }
+    return newActions;
+  });
+
   return {
     version: 1,
+    name: vialJson.name,
     uid: keyboardId.uid,
     via_protocol: viaProtocol,
     vial_protocol: keyboardId.vialProtocol,
-    layout_options: 0,
+    layout_options: layoutOption,
     layout,
+    macro: macro,
     encoder_layout: encoders,
     tap_dance: tapdance,
     combo,

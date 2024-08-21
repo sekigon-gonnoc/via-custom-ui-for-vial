@@ -450,6 +450,28 @@ class VialKeyboard {
     return macro_buffer.map((b) => Array.from(b.slice(4))).flat();
   }
 
+  async GetMacros(macroCount: number): Promise<number[][]> {
+    const readLength = 28 * 4;
+    const macroArray: number[][] = [[]];
+    let offset = 0;
+
+    while (macroArray.length <= macroCount + 1) {
+      const buffer = await this.GetMacroBuffer(offset, readLength);
+      buffer.reduce((acc, num) => {
+        if (num === 0) {
+          acc.push([]);
+        } else {
+          acc[acc.length - 1].push(num);
+        }
+        return acc;
+      }, macroArray);
+      offset += readLength;
+    }
+    macroArray.pop();
+
+    return macroArray;
+  }
+
   async SetMacroBuffer(offset: number, data: number[]) {
     const pageLen = Math.ceil(data.length / 28);
     await this.BatchCommand(
