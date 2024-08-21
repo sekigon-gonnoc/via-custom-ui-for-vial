@@ -3,38 +3,30 @@ import { QuantumSettingsReadAll } from "./quantumSettings";
 import { DynamicEntryCount, ViaKeyboard, VialDefinition } from "./vialKeyboad";
 
 export type VialKeyboardConfig = {
-  name: string;
-  layers: string[][];
-  encoders: string[][][];
-  tapdance: TapDanceConfig[];
+  version: number;
+  uid: bigint;
+  layout: string[][][];
+  encoder_layout: string[][][];
+  via_protocol: number;
+  vial_protocol: number;
+  layout_options: number;
+  tap_dance: TapDanceConfig[];
   combo: ComboConfig[];
-  override: OverrideConfig[];
-  quantum: { [key: string]: number };
+  key_override: OverrideConfig[];
+  settings: { [key: string]: number }; // quantum settings
 };
 
-export type TapDanceConfig = {
-  onTap: string;
-  onHold: string;
-  onDoubleTap: string;
-  onTapHold: string;
-  tappingTerm: number;
-};
+export type TapDanceConfig = [string, string, string, string, number];
 
-export type ComboConfig = {
-  key1: string;
-  key2: string;
-  key3: string;
-  key4: string;
-  output: string;
-};
+export type ComboConfig = [string, string, string, string, string];
 
 export type OverrideConfig = {
   trigger: string;
   replacement: string;
   layers: number;
-  triggerMods: number;
-  negativeModMask: number;
-  suppressedMods: number;
+  trigger_mods: number;
+  negative_mod_mask: number;
+  suppressed_mods: number;
   options: number;
 };
 
@@ -42,13 +34,16 @@ export async function VialKeyboardGetAllConfig(
   via: ViaKeyboard,
   vialJson: VialDefinition,
   dynamicEntryCount: DynamicEntryCount,
-) {
+): Promise<VialKeyboardConfig> {
   const keycodeConverter = new KeycodeConverter(
     dynamicEntryCount.layer,
     vialJson?.customKeycodes,
     dynamicEntryCount.macro,
     dynamicEntryCount.tapdance,
   );
+
+  const viaProtocol = await via.GetProtocolVersion();
+  const keyboardId = await via.GetVialKeyboardId();
 
   const encoderCount = vialJson?.layouts.keymap
     .flatMap((row) => row.flatMap((col) => col.toString()))
@@ -57,11 +52,18 @@ export async function VialKeyboardGetAllConfig(
       0,
     );
 
-  const layers: string[][] = [];
+  const layout: string[][][] = [];
   const encoders: string[][][] = [];
   for (let layerIdx = 0; layerIdx < dynamicEntryCount.layer; layerIdx++) {
     const layerBuffer = await via.GetLayer(layerIdx, vialJson?.matrix ?? { rows: 0, cols: 0 });
-    layers.push(layerBuffer.map((keycode) => keycodeConverter.convertIntToKeycode(keycode).key));
+    const layerKeys = layerBuffer.map(
+      (keycode) => keycodeConverter.convertIntToKeycode(keycode).key,
+    );
+    const rows = [...Array(vialJson?.matrix.rows)].map((_, idx) =>
+      layerKeys.slice(vialJson.matrix.cols * idx, vialJson.matrix.cols * (idx + 1)),
+    );
+    layout.push(rows);
+
     if (encoderCount) {
       const encoderBuffer = await via.GetEncoder(layerIdx, encoderCount);
       encoders.push(
@@ -77,13 +79,7 @@ export async function VialKeyboardGetAllConfig(
   )
     .map((td) => keycodeConverter.convertTapDance(td))
     .map((td) => {
-      return {
-        onTap: td.onTap.key,
-        onHold: td.onHold.key,
-        onDoubleTap: td.onDoubleTap.key,
-        onTapHold: td.onTapHold.key,
-        tappingTerm: td.tappingTerm,
-      };
+      return [td.onTap.key, td.onHold.key, td.onDoubleTap.key, td.onTapHold.key, td.tappingTerm];
     });
 
   const combo: ComboConfig[] = (
@@ -91,13 +87,7 @@ export async function VialKeyboardGetAllConfig(
   )
     .map((combo) => keycodeConverter.convertCombo(combo))
     .map((combo) => {
-      return {
-        key1: combo.key1.key,
-        key2: combo.key2.key,
-        key3: combo.key3.key,
-        key4: combo.key4.key,
-        output: combo.output.key,
-      };
+      return [combo.key1.key, combo.key2.key, combo.key3.key, combo.key4.key, combo.output.key];
     });
 
   const override: OverrideConfig[] = (
@@ -106,15 +96,31 @@ export async function VialKeyboardGetAllConfig(
     .map((override) => keycodeConverter.convertOverride(override))
     .map((override) => {
       return {
-        ...override,
         trigger: override.trigger.key,
         replacement: override.replacement.key,
+        layers: override.layers,
+        trigger_mods: override.triggerMods,
+        negative_mod_mask: override.negativeModMask,
+        suppressed_mods: override.suppressedMods,
+        options: override.options,
       };
     });
 
   const quantum = await QuantumSettingsReadAll(via);
 
-  return { name: vialJson.name, layers, encoders, tapdance, combo, override, quantum };
+  return {
+    version: 1,
+    uid: keyboardId.uid,
+    via_protocol: viaProtocol,
+    vial_protocol: keyboardId.vialProtocol,
+    layout_options: 0,
+    layout,
+    encoder_layout: encoders,
+    tap_dance: tapdance,
+    combo,
+    key_override: override,
+    settings: quantum,
+  };
 }
 
 export async function VialKeyboardSetAllConfig(
@@ -123,11 +129,6 @@ export async function VialKeyboardSetAllConfig(
   vialJson: VialDefinition,
   dynamicEntryCount: DynamicEntryCount,
 ) {
-  if (vialJson.name !== config.name) {
-    console.error("Keyboard name is not match");
-    return;
-  }
-
   const keycodeConverter = new KeycodeConverter(
     dynamicEntryCount.layer,
     vialJson?.customKeycodes,
@@ -137,8 +138,8 @@ export async function VialKeyboardSetAllConfig(
 
   const qmkKeycodes = [...Array(0xffff)].map((_, idx) => keycodeConverter.convertIntToKeycode(idx));
 
-  const keycodes = config.layers.map((layer) =>
-    layer.map((key) => qmkKeycodes.find((q) => key === q.key)?.value ?? 0),
+  const keycodes = config.layout.map((layer) =>
+    layer.flat().map((key) => qmkKeycodes.find((q) => key === q.key)?.value ?? 0),
   );
 
   const findKeycode = (keycode: string) => qmkKeycodes.find((q) => q.key === keycode)?.value ?? 0;
@@ -148,7 +149,7 @@ export async function VialKeyboardSetAllConfig(
   }
 
   await via.SetEncoder(
-    config.encoders
+    config.encoder_layout
       .map((layer) => layer.map((encoder) => encoder.map((key) => findKeycode(key))))
       .flatMap((layer, layerIdx) =>
         layer.flatMap((encoder, encoderIdx) => {
@@ -161,14 +162,14 @@ export async function VialKeyboardSetAllConfig(
   );
 
   await via.SetTapDance(
-    config.tapdance.map((td, id) => {
+    config.tap_dance.map((td, id) => {
       return {
         id: id,
-        onTap: findKeycode(td.onTap),
-        onHold: findKeycode(td.onHold),
-        onDoubleTap: findKeycode(td.onDoubleTap),
-        onTapHold: findKeycode(td.onTapHold),
-        tappingTerm: td.tappingTerm,
+        onTap: findKeycode(td[0]),
+        onHold: findKeycode(td[1]),
+        onDoubleTap: findKeycode(td[2]),
+        onTapHold: findKeycode(td[3]),
+        tappingTerm: td[4],
       };
     }),
   );
@@ -177,25 +178,29 @@ export async function VialKeyboardSetAllConfig(
     config.combo.map((c, id) => {
       return {
         id,
-        key1: findKeycode(c.key1),
-        key2: findKeycode(c.key2),
-        key3: findKeycode(c.key3),
-        key4: findKeycode(c.key4),
-        output: findKeycode(c.output),
+        key1: findKeycode(c[0]),
+        key2: findKeycode(c[1]),
+        key3: findKeycode(c[2]),
+        key4: findKeycode(c[3]),
+        output: findKeycode(c[4]),
       };
     }),
   );
 
   await via.SetOverride(
-    config.override.map((o, id) => {
+    config.key_override.map((o, id) => {
       return {
-        ...o,
         id,
         trigger: findKeycode(o.trigger),
         replacement: findKeycode(o.replacement),
+        layers: o.layers,
+        triggerMods: o.trigger_mods,
+        negativeModMask: o.negative_mod_mask,
+        suppressedMods: o.suppressed_mods,
+        options: o.options,
       };
     }),
   );
 
-  await via.SetQuantumSettingsValue(config.quantum);
+  await via.SetQuantumSettingsValue(config.settings);
 }

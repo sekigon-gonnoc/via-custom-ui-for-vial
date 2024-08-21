@@ -100,8 +100,7 @@ function App() {
       },
     );
     const version = await via.GetProtocolVersion();
-    await via.GetVialKeyboardId();
-    console.log(`protocol version:${version}`);
+    console.log(`via protocol version:${version}`);
     const compressed = await via.GetVialCompressedDefinition();
 
     let decompressed: Uint8Array;
@@ -148,7 +147,11 @@ function App() {
   const onVialSaveClick = async () => {
     if (vialJson === undefined) return;
     downloadData(
-      JSON.stringify(await VialKeyboardGetAllConfig(via, vialJson, dynamicEntryCount), null, 4),
+      JSON.stringify(
+        await VialKeyboardGetAllConfig(via, vialJson, dynamicEntryCount),
+        (key, value) => (typeof value === "bigint" ? value.toString() : value),
+        4,
+      ),
       `${kbName}-vial-setting.json`,
     );
   };

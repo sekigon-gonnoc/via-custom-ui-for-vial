@@ -126,7 +126,7 @@ class VialKeyboard {
     return this.hid.connected;
   }
 
-  async Command(msg: ArrayLike<number>) {
+  async Command(msg: ArrayLike<number>): Promise<Uint8Array> {
     return navigator.locks.request("vial-keyboard", async () => {
       if (!this.hid.connected) await this.Open();
       const send = Uint8Array.from(msg);
@@ -203,7 +203,12 @@ class VialKeyboard {
 
   async GetVialKeyboardId() {
     const res = await this.Command([via_command_id.id_vial, vial_command_id.vial_get_keyboard_id]);
-    return res?.slice(0, 4);
+    return {
+      vialProtocol: res.slice(0, 4).reduce((acc, num, idx) => acc + (num << (idx * 8)), 0),
+      uid: res
+        .slice(4, 12)
+        .reduce((acc, num, idx) => acc + (BigInt(num) << BigInt(idx * 8)), BigInt(0)),
+    };
   }
 
   async GetVialCompressedDefinition(): Promise<Uint8Array> {

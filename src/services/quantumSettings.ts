@@ -206,5 +206,14 @@ export async function QuantumSettingsReadAll(via: ViaKeyboard): Promise<{ [id: s
     set.content.map((setting) => setting.content),
   );
 
-  return await via.GetQuantumSettingsValue(ids.map((id) => id[1] as number));
+  return Object.entries(await via.GetQuantumSettingsValue(ids.map((id) => id[1] as number))).reduce(
+    (acc, v) => {
+      return {
+        ...acc,
+        [v[0]]:
+          v[1] & ((1 << ((ids.find((k) => k[1].toString() === v[0])?.[2] as number) * 8)) - 1),
+      };
+    },
+    {} as { [id: string]: number },
+  );
 }
