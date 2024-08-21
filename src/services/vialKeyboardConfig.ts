@@ -1,12 +1,15 @@
 import { KeycodeConverter } from "../components/keycodes/keycodeConverter";
+import { QuantumSettingsReadAll } from "./quantumSettings";
 import { DynamicEntryCount, ViaKeyboard, VialDefinition } from "./vialKeyboad";
 
 export type VialKeyboardConfig = {
+  name: string;
   layers: string[][];
   encoders: string[][][];
   tapdance: TapDanceConfig[];
   combo: ComboConfig[];
   override: OverrideConfig[];
+  quantum: { [key: string]: number };
 };
 
 export type TapDanceConfig = {
@@ -109,7 +112,9 @@ export async function VialKeyboardGetAllConfig(
       };
     });
 
-  return { layers, encoders, tapdance, combo, override };
+  const quantum = await QuantumSettingsReadAll(via);
+
+  return { name: vialJson.name, layers, encoders, tapdance, combo, override, quantum };
 }
 
 export async function VialKeyboardSetAllConfig(
@@ -118,6 +123,11 @@ export async function VialKeyboardSetAllConfig(
   vialJson: VialDefinition,
   dynamicEntryCount: DynamicEntryCount,
 ) {
+  if (vialJson.name !== config.name) {
+    console.error("Keyboard name is not match");
+    return;
+  }
+
   const keycodeConverter = new KeycodeConverter(
     dynamicEntryCount.layer,
     vialJson?.customKeycodes,
@@ -186,4 +196,6 @@ export async function VialKeyboardSetAllConfig(
       };
     }),
   );
+
+  await via.SetQuantumSettingsValue(config.quantum);
 }
