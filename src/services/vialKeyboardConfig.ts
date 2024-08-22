@@ -251,5 +251,38 @@ export async function VialKeyboardSetAllConfig(
     }),
   );
 
+  await via.SetMacroBuffer(
+    0,
+    config.macro
+      .map((macro) => {
+        const actions = macro
+          .map((action) => {
+            const [key, value] = action as [string, string | number];
+            if (key === "tap") {
+              const keycode = findKeycode(value as string);
+              return keycode > 0xff ? [5, keycode & 0xff, keycode >> 8] : [1, keycode];
+            } else if (key === "down") {
+              const keycode = findKeycode(value as string);
+              return keycode > 0xff ? [6, keycode & 0xff, keycode >> 8] : [2, keycode];
+            } else if (key === "up") {
+              const keycode = findKeycode(value as string);
+              return keycode > 0xff ? [7, keycode & 0xff, keycode >> 8] : [3, keycode];
+            } else if (key === "delay") {
+              const delay: number = value as number;
+              const upperbyte = Math.floor(delay / 255) + 1;
+              return [1, 4, delay - (upperbyte - 1) * 255 + 1, upperbyte];
+            } else if (key === "text") {
+              return Array.from(new TextEncoder().encode(value as string));
+            } else {
+              return [];
+            }
+          })
+          .flat();
+        actions.push(0);
+        return actions;
+      })
+      .flat(),
+  );
+
   await via.SetQuantumSettingsValue(config.settings);
 }
