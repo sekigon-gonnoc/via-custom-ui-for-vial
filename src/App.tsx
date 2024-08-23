@@ -100,6 +100,7 @@ function App() {
       },
     );
     const version = await via.GetProtocolVersion();
+    await via.GetVialKeyboardId(); // enable vial mode of BMP
     console.log(`via protocol version:${version}`);
     const compressed = await via.GetVialCompressedDefinition();
 
@@ -165,7 +166,7 @@ function App() {
       if (vialJson === undefined) return;
       const parsedJson = Hjson.parse(json) as VialKeyboardConfig;
       try {
-        VialKeyboardSetAllConfig(via, parsedJson, vialJson, dynamicEntryCount);
+        await VialKeyboardSetAllConfig(via, parsedJson, vialJson, dynamicEntryCount);
       } catch (e) {
         console.error(e);
       }

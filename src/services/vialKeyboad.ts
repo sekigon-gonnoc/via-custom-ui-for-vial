@@ -127,7 +127,7 @@ class VialKeyboard {
   }
 
   async Command(msg: ArrayLike<number>): Promise<Uint8Array> {
-    return navigator.locks.request("vial-keyboard", async () => {
+    return await navigator.locks.request("vial-keyboard", async () => {
       if (!this.hid.connected) await this.Open();
       const send = Uint8Array.from(msg);
       try {
@@ -149,28 +149,35 @@ class VialKeyboard {
       const res: Uint8Array[] = [];
       this.hid.setReceiveCallback((msg) => res.push(msg));
 
-      for (const msg of messages) {
-        await this.hid.write(Uint8Array.from(msg));
-      }
-
-      let timeout = timeoutMs;
-      let currentLen = res.length;
-      while (res.length < commandCount) {
-        await this.sleep(10);
-        if (currentLen != res.length) {
-          currentLen = res.length;
-          timeout = timeoutMs;
-        } else {
-          timeout -= 10;
-          if (timeout < 0) {
-            break;
+      const waitBufferFilled = async (length: number, timeoutMs: number) => {
+        let timeout = timeoutMs;
+        let currentLen = res.length;
+        while (res.length < length) {
+          await this.sleep(10);
+          if (currentLen != res.length) {
+            currentLen = res.length;
+            timeout = timeoutMs;
+          } else {
+            timeout -= 10;
+            if (timeout < 0) {
+              break;
+            }
           }
         }
+      };
+
+      let sentLen = 0;
+      while (sentLen < messages.length) {
+        for (const msg of messages.slice(sentLen, sentLen + 3)) {
+          await this.hid.write(Uint8Array.from(msg));
+        }
+        sentLen += messages.slice(sentLen, sentLen + 3).length;
+        await waitBufferFilled(sentLen - 1, timeoutMs);
       }
 
-      this.hid.setReceiveCallback(this.receiveCallback.bind(this));
+      await waitBufferFilled(commandCount, timeoutMs);
 
-      console.log(res);
+      this.hid.setReceiveCallback(this.receiveCallback.bind(this));
 
       return res;
     });
@@ -616,7 +623,10 @@ class VialKeyboard {
         vial_command_id.vial_qmk_settings_set,
         parseInt(v[0]) & 0xff,
         (parseInt(v[0]) >> 8) & 0xff,
-        v[1],
+        v[1] & 0xff,
+        (v[1] >> 8) & 0xff,
+        (v[1] >> 16) & 0xff,
+        (v[1] >> 24) & 0xff,
       ]),
     );
   }
