@@ -150,7 +150,7 @@ function App() {
     downloadData(
       JSON.stringify(
         await VialKeyboardGetAllConfig(via, vialJson, dynamicEntryCount),
-        (key, value) => (typeof value === "bigint" ? value.toString() : value),
+        (_key, value) => (typeof value === "bigint" ? value.toString() : value),
         4,
       ),
       `${kbName}-vial-setting.json`,

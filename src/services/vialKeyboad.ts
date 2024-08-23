@@ -168,10 +168,10 @@ class VialKeyboard {
 
       let sentLen = 0;
       while (sentLen < messages.length) {
-        for (const msg of messages.slice(sentLen, sentLen + 3)) {
+        for (const msg of messages.slice(sentLen, sentLen + 2)) {
           await this.hid.write(Uint8Array.from(msg));
         }
-        sentLen += messages.slice(sentLen, sentLen + 3).length;
+        sentLen += messages.slice(sentLen, sentLen + 2).length;
         await waitBufferFilled(sentLen - 1, timeoutMs);
       }
 
@@ -353,7 +353,7 @@ class VialKeyboard {
     };
   }
 
-  async GetDynamicEntryCountAll(): DynamicEntryCount {
+  async GetDynamicEntryCountAll(): Promise<DynamicEntryCount> {
     const res = await this.BatchCommand([
       [
         via_command_id.id_vial,
