@@ -5,6 +5,26 @@ export interface VialDefinition {
   matrix: { rows: number; cols: number };
   layouts: { keymap: string[][] };
   customKeycodes: { name: string; title: string; shortName: string }[];
+  menus: MenuDefinition[];
+}
+
+export interface MenuItemDefiniton {
+  type: string;
+  label: string;
+  content: (string | number)[];
+  options?: (string | number)[] | (string | number)[][];
+}
+
+export interface MenuOptionalItemDefiniton {
+  showIf: string;
+  content: MenuItemDefiniton[];
+}
+export interface MenuDefinition {
+  label: string;
+  content: (
+    | { label: string; content: (MenuItemDefiniton | MenuOptionalItemDefiniton)[] }
+    | MenuItemDefiniton
+  )[];
 }
 
 export interface DynamicEntryCount {
@@ -167,11 +187,16 @@ class VialKeyboard {
       };
 
       let sentLen = 0;
-      while (sentLen < messages.length) {
-        for (const msg of messages.slice(sentLen, sentLen + 2)) {
-          await this.hid.write(Uint8Array.from(msg));
-        }
-        sentLen += messages.slice(sentLen, sentLen + 2).length;
+      const QUEUE_SIZE = 2;
+
+      for (const msg of messages.slice(sentLen, sentLen + QUEUE_SIZE)) {
+        await this.hid.write(Uint8Array.from(msg));
+      }
+      sentLen += messages.slice(sentLen, sentLen + QUEUE_SIZE).length;
+
+      while (sentLen < commandCount) {
+        await this.hid.write(Uint8Array.from(messages[sentLen]));
+        sentLen++;
         await waitBufferFilled(sentLen - 1, timeoutMs);
       }
 

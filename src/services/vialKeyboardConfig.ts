@@ -1,6 +1,12 @@
 import { KeycodeConverter } from "../components/keycodes/keycodeConverter";
 import { QuantumSettingsReadAll } from "./quantumSettings";
-import { DynamicEntryCount, MenuItemDefiniton, MenuOptionalItemDefiniton, ViaKeyboard, VialDefinition } from "./vialKeyboad";
+import {
+  DynamicEntryCount,
+  MenuItemDefiniton,
+  MenuOptionalItemDefiniton,
+  ViaKeyboard,
+  VialDefinition,
+} from "./vialKeyboad";
 
 export type VialKeyboardConfig = {
   version: number;
@@ -16,7 +22,7 @@ export type VialKeyboardConfig = {
   combo: ComboConfig[];
   key_override: OverrideConfig[];
   settings: { [key: string]: number }; // quantum settings
-  custom: {[key:string]:number};
+  custom: { [key: string]: number };
 };
 
 export type TapDanceConfig = [string, string, string, string, number];
@@ -156,30 +162,30 @@ export async function VialKeyboardGetAllConfig(
     return newActions;
   });
 
-    const customValueId = vialJson.menus?.flatMap((top) =>
-      top.content.reduce((prev: (string | number)[][], section) => {
-        if (Object.keys(section).includes("type")) {
-          prev.push((section as MenuItemDefiniton).content);
-        } else {
-          for (const c of section.content) {
-            if (typeof c === "string") {
-              prev.push(section.content as (string | number)[]);
-              break;
-            } else if (Object.keys(c).includes("showIf")) {
-              prev.push(...(c as MenuOptionalItemDefiniton).content.map((c) => c.content));
-            } else if (Object.keys(c).includes("type")) {
-              prev.push((c as MenuItemDefiniton).content);
-            }
+  const customValueId = vialJson.menus?.flatMap((top) =>
+    top.content.reduce((prev: (string | number)[][], section) => {
+      if (Object.keys(section).includes("type")) {
+        prev.push((section as MenuItemDefiniton).content);
+      } else {
+        for (const c of section.content) {
+          if (typeof c === "string") {
+            prev.push(section.content as (string | number)[]);
+            break;
+          } else if (Object.keys(c).includes("showIf")) {
+            prev.push(...(c as MenuOptionalItemDefiniton).content.map((c) => c.content));
+          } else if (Object.keys(c).includes("type")) {
+            prev.push((c as MenuItemDefiniton).content);
           }
         }
-        return prev;
-      }, []),
-    );
+      }
+      return prev;
+    }, []),
+  );
 
-    const buffer = await via.GetCustomValue(customValueId?.map((v) => v.slice(1) as number[]) ?? []);
-    const customValues: { [id: string]: number } = buffer.reduce((acc, value, idx) => {
-      return { ...acc, [customValueId[idx][0]]: value };
-    }, {});
+  const buffer = await via.GetCustomValue(customValueId?.map((v) => v.slice(1) as number[]) ?? []);
+  const customValues: { [id: string]: number } = buffer.reduce((acc, value, idx) => {
+    return { ...acc, [customValueId[idx][0]]: value };
+  }, {});
 
   return {
     version: 1,
@@ -226,7 +232,6 @@ export async function VialKeyboardSetAllConfig(
     }
     return 0;
   };
-
 
   for (let layerIdx = 0; layerIdx < dynamicEntryCount.layer; layerIdx++) {
     await via.SetLayer(layerIdx, keycodes[layerIdx], vialJson!.matrix);
@@ -295,10 +300,10 @@ export async function VialKeyboardSetAllConfig(
             const [key, value] = action as [string, string | number];
             if (key === "tap") {
               const keycode = findKeycode(value as string);
-              return keycode > 0xff ? [1, 5, keycode & 0xff, keycode >> 8] : [1,1, keycode];
+              return keycode > 0xff ? [1, 5, keycode & 0xff, keycode >> 8] : [1, 1, keycode];
             } else if (key === "down") {
               const keycode = findKeycode(value as string);
-              return keycode > 0xff ? [1, 6, keycode & 0xff, keycode >> 8] : [1,2, keycode];
+              return keycode > 0xff ? [1, 6, keycode & 0xff, keycode >> 8] : [1, 2, keycode];
             } else if (key === "up") {
               const keycode = findKeycode(value as string);
               return keycode > 0xff ? [1, 7, keycode & 0xff, keycode >> 8] : [1, 3, keycode];

@@ -1,15 +1,15 @@
 import {
-  Switch,
-  Slider,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
-  Grid,
-  FormControl,
   Button,
-  ListItemText,
   Checkbox,
+  FormControl,
+  Grid,
   Input,
+  ListItemText,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  Slider,
+  Switch,
 } from "@mui/material";
 import { MuiColorInput, MuiColorInputColors } from "mui-color-input";
 import { ChangeEvent, SyntheticEvent } from "react";
