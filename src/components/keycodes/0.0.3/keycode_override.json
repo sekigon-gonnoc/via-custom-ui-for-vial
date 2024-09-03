@@ -8,5 +8,18 @@
       "_______",
       "KC_TRNS"
     ]
+  },
+  "46": {
+    "group": "basic",
+    "key": "KC_EQUAL",
+    "label": "=",
+    "aliases": [
+      "KC_EQL"
+    ],
+    "language": {
+      "japanese": {
+        "label": "^"
+      }
+    }
   }
 }

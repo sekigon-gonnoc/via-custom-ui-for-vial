@@ -664,6 +664,28 @@ function LayerEditor(props: {
   );
 }
 
+function LanguageSelector(props: {
+  languageList: string[];
+  lang: string;
+  onChange: (lang: string) => void;
+}) {
+  return (
+    <FormControl variant="standard">
+      <Select
+        value={props.lang}
+        label="language"
+        onChange={(event) => props.onChange(event.target.value)}
+      >
+        {props.languageList.map((label) => (
+          <MenuItem key={label} value={label}>
+            {label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+}
+
 export function KeymapEditor(props: {
   keymap: KeymapProperties;
   via: ViaKeyboard;
@@ -682,6 +704,7 @@ export function KeymapEditor(props: {
   const [macroIndex, setMacroIndex] = useState(-1);
   const [comboIndex, setComboIndex] = useState(-1);
   const [overrideIndex, setOverrideIndex] = useState(-1);
+  const [lang, setLang] = useState("US");
 
   const keycodeConverter = useMemo(() => {
     return new KeycodeConverter(
@@ -689,8 +712,9 @@ export function KeymapEditor(props: {
       props.keymap.customKeycodes,
       props.dynamicEntryCount.macro,
       props.dynamicEntryCount.tapdance,
+      lang,
     );
-  }, [props.dynamicEntryCount.layer, props.keymap.customKeycodes, props.dynamicEntryCount]);
+  }, [props.dynamicEntryCount.layer, props.keymap.customKeycodes, props.dynamicEntryCount, lang]);
 
   return (
     <>
@@ -743,6 +767,13 @@ export function KeymapEditor(props: {
             setMenuType("layer");
           }}
         ></OverrideEditor>
+      </Box>
+      <Box>
+        <LanguageSelector
+          languageList={["US", "Japanese"]}
+          lang={lang}
+          onChange={(lang) => setLang(lang)}
+        ></LanguageSelector>
       </Box>
       <KeycodeCatalog
         keycodeConverter={keycodeConverter}

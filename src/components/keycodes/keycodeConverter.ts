@@ -4,7 +4,13 @@ import keycodes_0_0_3 from "./0.0.3/keycodes.json";
 import quantum_keycode_range_0_0_3 from "./0.0.3/quantum_keycode_range.json";
 
 const keycodes: {
-  [val: string]: { group: string; key: string; label?: string; aliases?: string[] };
+  [val: string]: {
+    group: string;
+    key: string;
+    label?: string;
+    aliases?: string[];
+    language?: { [lang: string]: { label: string } };
+  };
 } = { ...keycodes_0_0_3, ...keycode_override_0_0_3 };
 const keycode_range: { [range: string]: { start: number; end: number } } =
   quantum_keycode_range_0_0_3;
@@ -106,6 +112,7 @@ export class KeycodeConverter {
     customKeycodes?: { name: string; title: string; shortName: string }[],
     macroCount: number = 0,
     tapDanceCount: number = 0,
+    language: string = "US",
   ) {
     this.customKeycodes = customKeycodes;
     this.layer = layer;
@@ -124,10 +131,15 @@ export class KeycodeConverter {
           const customKey = this.customKeycodes[value - keycode_range.QK_KB.start];
           return { group: "custom", value: value, key: customKey.name, label: customKey.shortName };
         } else {
+          let langLabel: string | undefined = undefined;
+          if (k[1].language && k[1].language[language.toLocaleLowerCase()]) {
+            langLabel = k[1].language[language.toLocaleLowerCase()].label;
+          }
+
           return {
             value: parseInt(k[0]),
             ...k[1],
-            label: k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
+            label: langLabel ?? k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
           };
         }
       });
