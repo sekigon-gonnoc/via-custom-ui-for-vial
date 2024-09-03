@@ -164,7 +164,7 @@ function App() {
   const onVialJsonUploaded = async (json: string) => {
     try {
       if (vialJson === undefined) return;
-      const parsedJson = Hjson.parse(json) as VialKeyboardConfig;
+      const parsedJson = JSON.parse(json) as VialKeyboardConfig;
       try {
         await VialKeyboardSetAllConfig(via, parsedJson, vialJson, dynamicEntryCount);
       } catch (e) {

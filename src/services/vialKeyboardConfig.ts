@@ -1,4 +1,4 @@
-import { KeycodeConverter } from "../components/keycodes/keycodeConverter";
+import { KeycodeConverter, QmkKeycode } from "../components/keycodes/keycodeConverter";
 import { QuantumSettingsReadAll } from "./quantumSettings";
 import {
   DynamicEntryCount,
@@ -218,7 +218,10 @@ export async function VialKeyboardSetAllConfig(
     dynamicEntryCount.tapdance,
   );
 
-  const qmkKeycodes = [...Array(0xffff)].map((_, idx) => keycodeConverter.convertIntToKeycode(idx));
+  const qmkKeycodes: QmkKeycode[] = Array(0xffff);
+  for (let k = 0; k < 0xffff; k++) {
+    qmkKeycodes[k] = keycodeConverter.convertIntToKeycode(k);
+  }
 
   const keycodes = config.layout.map((layer) =>
     layer.flat().map((key) => qmkKeycodes.find((q) => key === q.key)?.value ?? 0),

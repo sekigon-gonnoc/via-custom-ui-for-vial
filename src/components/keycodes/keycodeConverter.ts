@@ -99,6 +99,7 @@ export class KeycodeConverter {
   private customKeycodes;
   private layer: number;
   private tapKeycodeList: QmkKeycode[] = [];
+  private tapKeycodeMap: QmkKeycode[] = [];
   private holdKeycodeList: QmkKeycode[] = [];
   constructor(
     layer: number = 16,
@@ -200,6 +201,10 @@ export class KeycodeConverter {
     this.tapKeycodeList = this.tapKeycodeList.map((k) => {
       return { ...k, label: k.label.length > 2 ? k.label.replace(/_/g, " ") : k.label };
     });
+    this.tapKeycodeMap = Array(0xffff);
+    for (const k of this.tapKeycodeList) {
+      this.tapKeycodeMap[k.value] = k;
+    }
 
     this.holdKeycodeList.push(DefaultQmkKeycode, ModTapKeycodeBase);
     this.holdKeycodeList.push(
@@ -300,60 +305,60 @@ export class KeycodeConverter {
   public convertIntToKeycode(value: number): QmkKeycode {
     if (value === undefined) {
       return DefaultQmkKeycode;
-    } else if (this.tapKeycodeList.map((k) => k.value).includes(value)) {
-      return this.tapKeycodeList.find((k) => k.value === value) ?? DefaultQmkKeycode;
-    } else {
-      return match(value)
-        .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
+    }
+
+    if (this.tapKeycodeMap[value] !== undefined) return this.tapKeycodeMap[value];
+
+    return match(value)
+      .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
+        const modLabel = modStringShort((val >> 8) & 0x1f);
+        const modLongLabel = modStringLong((val >> 8) & 0x1f);
+        const baseKeycode = this.convertIntToKeycode(val & 0xff);
+        return {
+          value: val,
+          key: `MODS(${modLongLabel},${baseKeycode.key})`,
+          modLabel: modLabel,
+          label: baseKeycode.label,
+        };
+      })
+      .with(
+        P.number.between(keycode_range.QK_MOD_TAP.start, keycode_range.QK_MOD_TAP.end),
+        (val) => {
           const modLabel = modStringShort((val >> 8) & 0x1f);
           const modLongLabel = modStringLong((val >> 8) & 0x1f);
           const baseKeycode = this.convertIntToKeycode(val & 0xff);
           return {
             value: val,
-            key: `MODS(${modLongLabel},${baseKeycode.key})`,
-            modLabel: modLabel,
+            key: `MOD_TAP(${modLongLabel},${baseKeycode.key})`,
+            holdLabel: modLabel,
+            tap: val & 0xff,
             label: baseKeycode.label,
           };
-        })
-        .with(
-          P.number.between(keycode_range.QK_MOD_TAP.start, keycode_range.QK_MOD_TAP.end),
-          (val) => {
-            const modLabel = modStringShort((val >> 8) & 0x1f);
-            const modLongLabel = modStringLong((val >> 8) & 0x1f);
-            const baseKeycode = this.convertIntToKeycode(val & 0xff);
-            return {
-              value: val,
-              key: `MOD_TAP(${modLongLabel},${baseKeycode.key})`,
-              holdLabel: modLabel,
-              tap: val & 0xff,
-              label: baseKeycode.label,
-            };
-          },
-        )
-        .with(
-          P.number.between(keycode_range.QK_LAYER_TAP.start, keycode_range.QK_LAYER_TAP.end),
-          (val) => {
-            const baseKeycode = this.convertIntToKeycode(val & 0xff);
-            return {
-              value: val,
-              key: `LT(${(val >> 8) & 0xf},${baseKeycode.key})`,
-              hold: val >> 8,
-              holdLabel: `Layer${(val >> 8) & 0xf}`,
-              tap: val & 0xff,
-              label: baseKeycode.label,
-            };
-          },
-        )
-        .with(P.number, () => {
+        },
+      )
+      .with(
+        P.number.between(keycode_range.QK_LAYER_TAP.start, keycode_range.QK_LAYER_TAP.end),
+        (val) => {
+          const baseKeycode = this.convertIntToKeycode(val & 0xff);
           return {
-            group: "unknown",
-            key: `Any(${value.toString()})`,
-            label: `Any(${value.toString()})`,
-            value: value,
+            value: val,
+            key: `LT(${(val >> 8) & 0xf},${baseKeycode.key})`,
+            hold: val >> 8,
+            holdLabel: `Layer${(val >> 8) & 0xf}`,
+            tap: val & 0xff,
+            label: baseKeycode.label,
           };
-        })
-        .exhaustive();
-    }
+        },
+      )
+      .with(P.number, () => {
+        return {
+          group: "unknown",
+          key: `Any(${value.toString()})`,
+          label: `Any(${value.toString()})`,
+          value: value,
+        };
+      })
+      .exhaustive();
   }
 
   public convertTapDance(td: {
