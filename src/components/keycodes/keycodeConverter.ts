@@ -8,8 +8,9 @@ const keycodes: {
     group: string;
     key: string;
     label?: string;
+    shiftedLabel?: string;
     aliases?: string[];
-    language?: { [lang: string]: { label: string } };
+    language?: { [lang: string]: { label: string; shiftedLabel?: string } };
   };
 } = { ...keycodes_0_0_3, ...keycode_override_0_0_3 };
 const keycode_range: { [range: string]: { start: number; end: number } } =
@@ -20,6 +21,7 @@ export type QmkKeycode = {
   group?: string;
   key: string;
   label: string;
+  shiftedLabel?: string;
   aliases?: string[];
   hold?: number;
   tap?: number;
@@ -132,13 +134,16 @@ export class KeycodeConverter {
           return { group: "custom", value: value, key: customKey.name, label: customKey.shortName };
         } else {
           let langLabel: string | undefined = undefined;
+          let shiftedLabel: string | undefined = k[1].shiftedLabel;
           if (k[1].language && k[1].language[language.toLocaleLowerCase()]) {
             langLabel = k[1].language[language.toLocaleLowerCase()].label;
+            shiftedLabel = k[1].language[language.toLocaleLowerCase()].shiftedLabel;
           }
 
           return {
             value: parseInt(k[0]),
             ...k[1],
+            shiftedLabel: shiftedLabel,
             label: langLabel ?? k[1].label ?? k[1].aliases?.[0] ?? k[1].key,
           };
         }
@@ -331,6 +336,7 @@ export class KeycodeConverter {
           key: `MODS(${modLongLabel},${baseKeycode.key})`,
           modLabel: modLabel,
           label: baseKeycode.label,
+          shiftedLabel: baseKeycode.shiftedLabel,
         };
       })
       .with(
@@ -345,6 +351,7 @@ export class KeycodeConverter {
             holdLabel: modLabel,
             tap: val & 0xff,
             label: baseKeycode.label,
+            shiftedLabel: baseKeycode.shiftedLabel,
           };
         },
       )
@@ -359,6 +366,7 @@ export class KeycodeConverter {
             holdLabel: `Layer${(val >> 8) & 0xf}`,
             tap: val & 0xff,
             label: baseKeycode.label,
+            shiftedLabel: baseKeycode.shiftedLabel,
           };
         },
       )

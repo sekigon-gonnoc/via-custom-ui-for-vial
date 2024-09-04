@@ -1,4 +1,3 @@
-
 {
   "1": {
     "group": "internal",
@@ -9,16 +8,330 @@
       "KC_TRNS"
     ]
   },
+  "30": {
+    "group": "basic",
+    "key": "KC_1",
+    "label": "1",
+    "shiftedLabel": "!"
+  },
+  "31": {
+    "group": "basic",
+    "key": "KC_2",
+    "label": "2",
+    "shiftedLabel": "@",
+    "language": {
+      "japanese": {
+        "shiftedLabel": "\""
+      }
+    }
+  },
+  "32": {
+    "group": "basic",
+    "key": "KC_3",
+    "label": "3",
+    "shiftedLabel": "#"
+  },
+  "33": {
+    "group": "basic",
+    "key": "KC_4",
+    "label": "4",
+    "shiftedLabel": "$"
+  },
+  "34": {
+    "group": "basic",
+    "key": "KC_5",
+    "label": "5",
+    "shiftedLabel": "%"
+  },
+  "35": {
+    "group": "basic",
+    "key": "KC_6",
+    "label": "6",
+    "shiftedLabel": "^",
+    "language": {
+      "japanese": {
+        "shiftedLabel": "&"
+      }
+    }
+  },
+  "36": {
+    "group": "basic",
+    "key": "KC_7",
+    "label": "7",
+    "shiftedLabel": "&",
+    "language": {
+      "japanese": {
+        "shiftedLabel": "'"
+      }
+    }
+  },
+  "37": {
+    "group": "basic",
+    "key": "KC_8",
+    "label": "8",
+    "shiftedLabel": "*",
+    "language": {
+      "japanese": {
+        "shiftedLabel": "("
+      }
+    }
+  },
+  "38": {
+    "group": "basic",
+    "key": "KC_9",
+    "label": "9",
+    "shiftedLabel": "(",
+    "language": {
+      "japanese": {
+        "shiftedLabel": ")"
+      }
+    }
+  },
+  "39": {
+    "group": "basic",
+    "key": "KC_0",
+    "label": "0",
+    "shiftedLabel": ")",
+    "language": {
+      "japanese": {
+        "shiftedLabel": "　"
+      }
+    }
+  },
+  "45": {
+    "group": "basic",
+    "key": "KC_MINUS",
+    "label": "-",
+    "shiftedLabel": "_",
+    "aliases": [
+      "KC_MINS"
+    ],
+    "language": {
+      "japanese": {
+        "label": "-",
+        "shiftedLabel": "="
+      }
+    }
+  },
   "46": {
     "group": "basic",
     "key": "KC_EQUAL",
     "label": "=",
+    "shiftedLabel": "+",
     "aliases": [
       "KC_EQL"
     ],
     "language": {
       "japanese": {
-        "label": "^"
+        "label": "^",
+        "shiftedLabel": "~"
+      }
+    }
+  },
+  "47": {
+    "group": "basic",
+    "key": "KC_LEFT_BRACKET",
+    "label": "[",
+    "shiftedLabel": "{",
+    "aliases": [
+      "KC_LBRC"
+    ],
+    "language": {
+      "japanese": {
+        "label": "@",
+        "shiftedLabel": "`"
+      }
+    }
+  },
+  "48": {
+    "group": "basic",
+    "key": "KC_RIGHT_BRACKET",
+    "label": "]",
+    "shiftedLabel": "}",
+    "aliases": [
+      "KC_RBRC"
+    ],
+    "language": {
+      "japanese": {
+        "label": "[",
+        "shiftedLabel": "{"
+      }
+    }
+  },
+  "49": {
+    "group": "basic",
+    "key": "KC_BACKSLASH",
+    "label": "\\",
+    "shiftedLabel": "|",
+    "aliases": [
+      "KC_BSLS"
+    ],
+    "language": {
+      "japanese": {
+        "label": "]",
+        "shiftedLabel": "}"
+      }
+    }
+  },
+  "50": {
+    "group": "basic",
+    "key": "KC_NONUS_HASH",
+    "label": "NONUS_HASH",
+    "aliases": [
+      "KC_NUHS"
+    ]
+  },
+  "51": {
+    "group": "basic",
+    "key": "KC_SEMICOLON",
+    "label": ";",
+    "shiftedLabel": ":",
+    "aliases": [
+      "KC_SCLN"
+    ],
+    "language": {
+      "japanese": {
+        "label": ";",
+        "shiftedLabel": "+"
+      }
+    }
+  },
+  "52": {
+    "group": "basic",
+    "key": "KC_QUOTE",
+    "label": "'",
+    "shiftedLabel": "\"",
+    "aliases": [
+      "KC_QUOT"
+    ],
+    "language": {
+      "japanese": {
+        "label": ":",
+        "shiftedLabel": "*"
+      }
+    }
+  },
+  "53": {
+    "group": "basic",
+    "key": "KC_GRAVE",
+    "label": "`",
+    "shiftedLabel": "~",
+    "aliases": [
+      "KC_GRV"
+    ],
+    "language": {
+      "japanese": {
+        "label": "半角/全角"
+      }
+    }
+  },
+  "54": {
+    "group": "basic",
+    "key": "KC_COMMA",
+    "label": ",",
+    "shiftedLabel": "<",
+    "aliases": [
+      "KC_COMM"
+    ]
+  },
+  "55": {
+    "group": "basic",
+    "key": "KC_DOT",
+    "label": ".",
+    "shiftedLabel": ">"
+  },
+  "56": {
+    "group": "basic",
+    "key": "KC_SLASH",
+    "label": "/",
+    "shiftedLabel": "?",
+    "aliases": [
+      "KC_SLSH"
+    ]
+  },
+  "100": {
+    "group": "basic",
+    "key": "KC_NONUS_BACKSLASH",
+    "label": "NONUS_BS",
+    "aliases": [
+      "KC_NUBS"
+    ]
+  },
+  "135": {
+    "group": "basic",
+    "key": "KC_INTERNATIONAL_1",
+    "label": "INT 1",
+    "aliases": [
+      "KC_INT1"
+    ],
+    "language": {
+      "japanese": {
+        "label": "￥"
+      }
+    }
+  },
+  "136": {
+    "group": "basic",
+    "key": "KC_INTERNATIONAL_2",
+    "label": "INT 2",
+    "aliases": [
+      "KC_INT2"
+    ],
+    "language": {
+      "japanese": {
+        "label": "カナ"
+      }
+    }
+  },
+  "138": {
+    "group": "basic",
+    "key": "KC_INTERNATIONAL_4",
+    "label": "INT 4",
+    "aliases": [
+      "KC_INT4"
+    ],
+    "language": {
+      "japanese": {
+        "label": "変換"
+      }
+    }
+  },
+  "139": {
+    "group": "basic",
+    "key": "KC_INTERNATIONAL_5",
+    "label": "INT 5",
+    "aliases": [
+      "KC_INT5"
+    ],
+    "language": {
+      "japanese": {
+        "label": "無変換"
+      }
+    }
+  },
+  "144": {
+    "group": "basic",
+    "key": "KC_LANGUAGE_1",
+    "label": "LANG 1",
+    "aliases": [
+      "KC_LNG1"
+    ],
+    "language": {
+      "japanese": {
+        "label": "IME ON"
+      }
+    }
+  },
+  "145": {
+    "group": "basic",
+    "key": "KC_LANGUAGE_2",
+    "label": "LANG 2",
+    "aliases": [
+      "KC_LNG2"
+    ],
+    "language": {
+      "japanese": {
+        "label": "IME OFF"
       }
     }
   }

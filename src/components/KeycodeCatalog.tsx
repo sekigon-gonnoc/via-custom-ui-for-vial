@@ -65,7 +65,8 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggabl
           }
         }}
       >
-        {props.keycode.label}
+        <div>{props.keycode.shiftedLabel ?? ""}</div>
+        <div>{props.keycode.label}</div>
       </div>
     </Tooltip>
   );
