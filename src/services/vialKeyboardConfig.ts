@@ -210,6 +210,7 @@ export async function VialKeyboardSetAllConfig(
   config: VialKeyboardConfig,
   vialJson: VialDefinition,
   dynamicEntryCount: DynamicEntryCount,
+  customValueIds: Array<[string, number, number, number?]>,
 ) {
   const keycodeConverter = new KeycodeConverter(
     dynamicEntryCount.layer,
@@ -328,4 +329,11 @@ export async function VialKeyboardSetAllConfig(
   );
 
   await via.SetQuantumSettingsValue(config.settings);
+
+  for (const element of customValueIds) {
+    if (config.custom[element[0]] !== undefined) {
+      await via.SetCustomValue(element.slice(1) as number[], config.custom[element[0]]);
+      await via.SaveCustomValue(element.slice(1) as number[]);
+    }
+  }
 }

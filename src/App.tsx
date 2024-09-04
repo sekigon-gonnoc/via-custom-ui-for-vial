@@ -166,11 +166,13 @@ function App() {
       if (vialJson === undefined) return;
       const parsedJson = JSON.parse(json) as VialKeyboardConfig;
       try {
-        await VialKeyboardSetAllConfig(via, parsedJson, vialJson, dynamicEntryCount);
+        await VialKeyboardSetAllConfig(via, parsedJson, vialJson, dynamicEntryCount, customValueId);
       } catch (e) {
         console.error(e);
+        alert("Failed to write configurations");
       }
 
+      await getCustomValues(customValueId);
       setVialJson({ ...vialJson! });
     } catch (error) {
       console.error("Error parsing JSON:", error);
