@@ -16,6 +16,7 @@ export type VialKeyboardConfig = {
   encoder_layout: string[][][];
   via_protocol: number;
   vial_protocol: number;
+  keycode_version: string;
   layout_options: number;
   macro: (string | number)[][][];
   tap_dance: TapDanceConfig[];
@@ -193,6 +194,7 @@ export async function VialKeyboardGetAllConfig(
     uid: keyboardId.uid,
     via_protocol: viaProtocol,
     vial_protocol: keyboardId.vialProtocol,
+    keycode_version: "0.0.3",
     layout_options: layoutOption,
     layout,
     macro: macro,
