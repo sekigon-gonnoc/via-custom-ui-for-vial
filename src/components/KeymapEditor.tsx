@@ -14,7 +14,7 @@ import {
   TextField,
 } from "@mui/material";
 import { matchSorter } from "match-sorter";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { match, P } from "ts-pattern";
 import "../App.css";
 import { ViaKeyboard } from "../services/vialKeyboad";
@@ -705,18 +705,21 @@ export function KeymapEditor(props: {
   const [comboIndex, setComboIndex] = useState(-1);
   const [overrideIndex, setOverrideIndex] = useState(-1);
   const [lang, setLang] = useState("US");
+  const [keycodeConverter, setKeycodeConverter] = useState<KeycodeConverter>();
 
-  const keycodeConverter = useMemo(() => {
-    return new KeycodeConverter(
+  useEffect(() => {
+    KeycodeConverter.Create(
       props.dynamicEntryCount.layer,
       props.keymap.customKeycodes,
       props.dynamicEntryCount.macro,
       props.dynamicEntryCount.tapdance,
       lang,
-    );
+    ).then((k) => setKeycodeConverter(k));
   }, [props.dynamicEntryCount.layer, props.keymap.customKeycodes, props.dynamicEntryCount, lang]);
 
-  return (
+  return keycodeConverter === undefined ? (
+    <></>
+  ) : (
     <>
       <Box hidden={menuType !== "layer"}>
         <LayerEditor

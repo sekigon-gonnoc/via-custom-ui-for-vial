@@ -2,7 +2,7 @@ import fs from "fs";
 import fetch from "node-fetch";
 import path from "path";
 
-const outputFilePath = "src/components/keycodes";
+const outputFilePath = "public/keycodes";
 const version = "0.0.3";
 
 const [keycodes, range] = await fetch(

@@ -44,7 +44,7 @@ export async function VialKeyboardGetAllConfig(
   vialJson: VialDefinition,
   dynamicEntryCount: DynamicEntryCount,
 ): Promise<VialKeyboardConfig> {
-  const keycodeConverter = new KeycodeConverter(
+  const keycodeConverter = await KeycodeConverter.Create(
     dynamicEntryCount.layer,
     vialJson?.customKeycodes,
     dynamicEntryCount.macro,
@@ -212,7 +212,7 @@ export async function VialKeyboardSetAllConfig(
   dynamicEntryCount: DynamicEntryCount,
   customValueIds: Array<[string, number, number, number?]>,
 ) {
-  const keycodeConverter = new KeycodeConverter(
+  const keycodeConverter = await KeycodeConverter.Create(
     dynamicEntryCount.layer,
     vialJson?.customKeycodes,
     dynamicEntryCount.macro,

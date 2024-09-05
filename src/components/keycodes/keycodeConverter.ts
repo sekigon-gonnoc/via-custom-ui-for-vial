@@ -1,20 +1,4 @@
 import { match, P } from "ts-pattern";
-import keycode_override_0_0_3 from "./0.0.3/keycode_override.json";
-import keycodes_0_0_3 from "./0.0.3/keycodes.json";
-import quantum_keycode_range_0_0_3 from "./0.0.3/quantum_keycode_range.json";
-
-const keycodes: {
-  [val: string]: {
-    group: string;
-    key: string;
-    label?: string;
-    shiftedLabel?: string;
-    aliases?: string[];
-    language?: { [lang: string]: { label: string; shiftedLabel?: string } };
-  };
-} = { ...keycodes_0_0_3, ...keycode_override_0_0_3 };
-const keycode_range: { [range: string]: { start: number; end: number } } =
-  quantum_keycode_range_0_0_3;
 
 export type QmkKeycode = {
   value: number;
@@ -71,12 +55,6 @@ export const DefaultQmkKeycode: QmkKeycode = {
   label: "",
 };
 
-const ModTapKeycodeBase: QmkKeycode = {
-  label: " Mod Tap",
-  value: keycode_range.QK_MOD_TAP.start,
-  key: "MOD_TAP(kc)",
-};
-
 function modStringShort(mod: number) {
   const MOD = ["C", "S", "A", "G"];
   const activeMod = [];
@@ -103,13 +81,58 @@ function modStringLong(mod: number) {
     : `${activeMod.map((m) => `MOD_L${m}`).join("|")}`;
 }
 
+type KeycodeDefinition = {
+  [val: string]: {
+    group: string;
+    key: string;
+    label?: string;
+    shiftedLabel?: string;
+    aliases?: string[];
+    language?: { [lang: string]: { label: string; shiftedLabel?: string } };
+  };
+};
+
+type KeycodeRangeDefinition = { [range: string]: { start: number; end: number } };
+
 export class KeycodeConverter {
   private customKeycodes;
   private layer: number;
   private tapKeycodeList: QmkKeycode[] = [];
   private tapKeycodeMap: QmkKeycode[] = [];
   private holdKeycodeList: QmkKeycode[] = [];
-  constructor(
+  private modTapKeycodeBase: QmkKeycode;
+  private keycode_range: KeycodeRangeDefinition;
+
+  static async Create(
+    layer: number = 16,
+    customKeycodes?: { name: string; title: string; shortName: string }[],
+    macroCount: number = 0,
+    tapDanceCount: number = 0,
+    language: string = "US",
+    version: string = "0.0.3",
+  ) {
+    const keycodes: KeycodeDefinition = {
+      ...(await (await fetch(`keycodes/${version}/keycodes.json`)).json()),
+      ...(await (await fetch(`keycodes/${version}/keycode_override.json`)).json()),
+    };
+    const keycode_range: KeycodeRangeDefinition = await (
+      await fetch(`keycodes/${version}/quantum_keycode_range.json`)
+    ).json();
+
+    return new KeycodeConverter(
+      keycodes,
+      keycode_range,
+      layer,
+      customKeycodes,
+      macroCount,
+      tapDanceCount,
+      language,
+    );
+  }
+
+  private constructor(
+    keycodes: KeycodeDefinition,
+    keycode_range: KeycodeRangeDefinition,
     layer: number = 16,
     customKeycodes?: { name: string; title: string; shortName: string }[],
     macroCount: number = 0,
@@ -118,6 +141,7 @@ export class KeycodeConverter {
   ) {
     this.customKeycodes = customKeycodes;
     this.layer = layer;
+    this.keycode_range = keycode_range;
 
     this.tapKeycodeList = Object.entries(keycodes)
       .filter(
@@ -223,7 +247,13 @@ export class KeycodeConverter {
       this.tapKeycodeMap[k.value] = k;
     }
 
-    this.holdKeycodeList.push(DefaultQmkKeycode, ModTapKeycodeBase);
+    this.modTapKeycodeBase = {
+      label: " Mod Tap",
+      value: keycode_range.QK_MOD_TAP.start,
+      key: "MOD_TAP(kc)",
+    };
+
+    this.holdKeycodeList.push(DefaultQmkKeycode, this.modTapKeycodeBase);
     this.holdKeycodeList.push(
       ...[...Array(this.layer)].map((_, layer) => {
         return {
@@ -247,8 +277,8 @@ export class KeycodeConverter {
     if (keycode === undefined) {
       return DefaultQmkKeycode;
     } else if (
-      keycode_range.QK_MODS.start <= keycode.value &&
-      keycode.value <= keycode_range.QK_LAYER_TAP.end
+      this.keycode_range.QK_MODS.start <= keycode.value &&
+      keycode.value <= this.keycode_range.QK_LAYER_TAP.end
     ) {
       return this.convertIntToKeycode(keycode.value & 0xff);
     } else {
@@ -260,13 +290,13 @@ export class KeycodeConverter {
     if (keycode === undefined) {
       return DefaultQmkKeycode;
     } else if (
-      keycode_range.QK_MOD_TAP.start <= keycode.value &&
-      keycode.value <= keycode_range.QK_MOD_TAP.end
+      this.keycode_range.QK_MOD_TAP.start <= keycode.value &&
+      keycode.value <= this.keycode_range.QK_MOD_TAP.end
     ) {
-      return ModTapKeycodeBase;
+      return this.modTapKeycodeBase;
     } else if (
-      keycode_range.QK_LAYER_TAP.start <= keycode.value &&
-      keycode.value <= keycode_range.QK_LAYER_TAP.end
+      this.keycode_range.QK_LAYER_TAP.start <= keycode.value &&
+      keycode.value <= this.keycode_range.QK_LAYER_TAP.end
     ) {
       return (
         this.getHoldKeycodeList().find(
@@ -282,8 +312,8 @@ export class KeycodeConverter {
     if (keycode === undefined) {
       return 0;
     } else if (
-      keycode_range.QK_MODS.start <= keycode.value &&
-      keycode.value <= keycode_range.QK_MOD_TAP.end
+      this.keycode_range.QK_MODS.start <= keycode.value &&
+      keycode.value <= this.keycode_range.QK_MOD_TAP.end
     ) {
       return (keycode.value >> 8) & 0x1f;
     } else {
@@ -297,21 +327,21 @@ export class KeycodeConverter {
     mods: ModifierBits = 0,
   ): QmkKeycode | null {
     if (
-      keycode_range.QK_BASIC.start <= tap.value &&
-      tap.value <= keycode_range.QK_BASIC.end &&
+      this.keycode_range.QK_BASIC.start <= tap.value &&
+      tap.value <= this.keycode_range.QK_BASIC.end &&
       hold.value == 0
     ) {
       return this.convertIntToKeycode(tap.value | (mods << 8));
-    } else if (tap.value > keycode_range.QK_BASIC.end) {
+    } else if (tap.value > this.keycode_range.QK_BASIC.end) {
       return this.convertIntToKeycode(tap.value);
     } else if (
-      keycode_range.QK_MOD_TAP.start <= hold.value &&
-      hold.value <= keycode_range.QK_MOD_TAP.end
+      this.keycode_range.QK_MOD_TAP.start <= hold.value &&
+      hold.value <= this.keycode_range.QK_MOD_TAP.end
     ) {
       return this.convertIntToKeycode((tap.value & 0x00ff) | (hold.value & 0xff00) | (mods << 8));
     } else if (
-      keycode_range.QK_LAYER_TAP.start <= hold.value &&
-      hold.value <= keycode_range.QK_LAYER_TAP.end
+      this.keycode_range.QK_LAYER_TAP.start <= hold.value &&
+      hold.value <= this.keycode_range.QK_LAYER_TAP.end
     ) {
       return this.convertIntToKeycode((tap.value & 0x00ff) | (hold.value & 0xff00));
     } else {
@@ -327,20 +357,23 @@ export class KeycodeConverter {
     if (this.tapKeycodeMap[value] !== undefined) return this.tapKeycodeMap[value];
 
     return match(value)
-      .with(P.number.between(keycode_range.QK_MODS.start, keycode_range.QK_MODS.end), (val) => {
-        const modLabel = modStringShort((val >> 8) & 0x1f);
-        const modLongLabel = modStringLong((val >> 8) & 0x1f);
-        const baseKeycode = this.convertIntToKeycode(val & 0xff);
-        return {
-          value: val,
-          key: `MODS(${modLongLabel},${baseKeycode.key})`,
-          modLabel: modLabel,
-          label: baseKeycode.label,
-          shiftedLabel: baseKeycode.shiftedLabel,
-        };
-      })
       .with(
-        P.number.between(keycode_range.QK_MOD_TAP.start, keycode_range.QK_MOD_TAP.end),
+        P.number.between(this.keycode_range.QK_MODS.start, this.keycode_range.QK_MODS.end),
+        (val) => {
+          const modLabel = modStringShort((val >> 8) & 0x1f);
+          const modLongLabel = modStringLong((val >> 8) & 0x1f);
+          const baseKeycode = this.convertIntToKeycode(val & 0xff);
+          return {
+            value: val,
+            key: `MODS(${modLongLabel},${baseKeycode.key})`,
+            modLabel: modLabel,
+            label: baseKeycode.label,
+            shiftedLabel: baseKeycode.shiftedLabel,
+          };
+        },
+      )
+      .with(
+        P.number.between(this.keycode_range.QK_MOD_TAP.start, this.keycode_range.QK_MOD_TAP.end),
         (val) => {
           const modLabel = modStringShort((val >> 8) & 0x1f);
           const modLongLabel = modStringLong((val >> 8) & 0x1f);
@@ -356,7 +389,10 @@ export class KeycodeConverter {
         },
       )
       .with(
-        P.number.between(keycode_range.QK_LAYER_TAP.start, keycode_range.QK_LAYER_TAP.end),
+        P.number.between(
+          this.keycode_range.QK_LAYER_TAP.start,
+          this.keycode_range.QK_LAYER_TAP.end,
+        ),
         (val) => {
           const baseKeycode = this.convertIntToKeycode(val & 0xff);
           return {
