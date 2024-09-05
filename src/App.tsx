@@ -18,12 +18,10 @@ import { useEffect, useRef, useState } from "react";
 import { match, P } from "ts-pattern";
 import "./App.css";
 import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
-import {
-  QuantumSettingsEditor,
-  QuantumSettingsSaveButton,
-} from "./components/QuantumSettingsEditor";
+import { QuantumSettingsEditor } from "./components/QuantumSettingsEditor";
 import { MenuItemProperties, MenuSectionProperties, ViaMenuItem } from "./components/ViaMenuItem";
 import init, { xz_decompress } from "./pkg";
+import { QuantumSettingDefinition } from "./services/quantumSettings";
 import { DynamicEntryCount, ViaKeyboard, VialDefinition } from "./services/vialKeyboad";
 import {
   VialKeyboardConfig,
@@ -158,14 +156,19 @@ function App() {
 
   const onVialSaveClick = async () => {
     if (vialJson === undefined) return;
-    downloadData(
-      JSON.stringify(
-        await VialKeyboardGetAllConfig(via, vialJson, dynamicEntryCount),
-        (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-        4,
-      ),
-      `${kbName}-vial-setting.json`,
-    );
+    try {
+      setLoading(true);
+      downloadData(
+        JSON.stringify(
+          await VialKeyboardGetAllConfig(via, vialJson, dynamicEntryCount),
+          (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+          4,
+        ),
+        `${kbName}-vial-setting.json`,
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onVialUploadJsonClick = async () => {
@@ -175,6 +178,7 @@ function App() {
   const onVialJsonUploaded = async (json: string) => {
     try {
       if (vialJson === undefined) return;
+      setLoading(true);
       const parsedJson = JSON.parse(json) as VialKeyboardConfig;
       try {
         await VialKeyboardSetAllConfig(via, parsedJson, vialJson, dynamicEntryCount, customValueId);
@@ -188,16 +192,40 @@ function App() {
     } catch (error) {
       console.error("Error parsing JSON:", error);
       alert("Invalid JSON file.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onQuantumSaveClick = async () => {
+    try {
+      setLoading(true);
+      await via.SetQuantumSettingsValue(
+        Object.entries(quantumValues).reduce((acc, value) => {
+          const idNum = QuantumSettingDefinition.map((def) => def.content)
+            .map((def) => def.map((d) => d.content))
+            .flat()
+            .find((q) => q[0] === value[0])?.[1];
+          return idNum !== undefined ? { ...acc, [idNum]: value[1] } : acc;
+        }, {}),
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const onCustomSaveClick = async () => {
-    for (const element of customValueId) {
-      await via.SetCustomValue(element.slice(1) as number[], customValues[element[0]]);
-      await via.SaveCustomValue(element.slice(1) as number[]);
-    }
+    try {
+      setLoading(true);
+      for (const element of customValueId) {
+        await via.SetCustomValue(element.slice(1) as number[], customValues[element[0]]);
+        await via.SaveCustomValue(element.slice(1) as number[]);
+      }
 
-    getCustomValues(customValueId);
+      getCustomValues(customValueId);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onCustomEraseClick = async () => {
@@ -210,8 +238,13 @@ function App() {
 
   const onDialogOkClick = async () => {
     setCustomEraseDialogOpen(false);
-    await via.ResetEeprom();
-    await getCustomValues(customValueId);
+    try {
+      setLoading(true);
+      await via.ResetEeprom();
+      await getCustomValues(customValueId);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const downloadData = (data: any, name: string) => {
@@ -241,6 +274,9 @@ function App() {
 
   return (
     <>
+      <Dialog open={loading}>
+        <DialogContent>Loading...</DialogContent>
+      </Dialog>
       <Grid container spacing={2}>
         <Grid item xs={3}>
           <Box>
@@ -317,11 +353,20 @@ function App() {
 
                 <Grid container rowSpacing={1} columnSpacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <QuantumSettingsSaveButton
-                      via={via}
-                      value={quantumValues}
-                      connected={connected}
-                    ></QuantumSettingsSaveButton>
+                    <Button
+                      sx={{
+                        width: "100%",
+                        ml: 1,
+                        mb: 1,
+                      }}
+                      variant="contained"
+                      color="primary"
+                      onClick={() => {
+                        onQuantumSaveClick();
+                      }}
+                    >
+                      Save quantum
+                    </Button>
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <Button
@@ -468,7 +513,12 @@ function App() {
             color="primary"
             onClick={async () => {
               setQuantumEraseDialogOpen(false);
-              await via.EraseQuantumSettingsValue();
+              setLoading(true);
+              try {
+                await via.EraseQuantumSettingsValue();
+              } finally {
+                setLoading(false);
+              }
               setActiveMenu(undefined);
             }}
           >
