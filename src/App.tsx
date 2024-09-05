@@ -386,24 +386,27 @@ function App() {
               </List>
             </div>
             <Divider />
-            {customMenus.map((top) => (
-              <Box key={top.label}>
-                <ListSubheader> {top.label}</ListSubheader>
-                <List disablePadding>
-                  {top.content.map((menu) => (
-                    <ListItemButton
-                      key={menu.label}
-                      onClick={() => {
-                        setActiveMenu({ menuType: "customMenu", menu: menu });
-                      }}
-                    >
-                      <ListItemText primary={menu.label} />
-                    </ListItemButton>
-                  ))}
-                </List>
-                <Divider />
-              </Box>
-            ))}
+            <ListSubheader>Custom settings</ListSubheader>
+            <Box sx={{ ml: 2 }}>
+              {customMenus.map((top) => (
+                <Box key={top.label}>
+                  <ListSubheader> {top.label}</ListSubheader>
+                  <List disablePadding>
+                    {top.content.map((menu) => (
+                      <ListItemButton
+                        key={menu.label}
+                        onClick={() => {
+                          setActiveMenu({ menuType: "customMenu", menu: menu });
+                        }}
+                      >
+                        <ListItemText primary={menu.label} />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                  <Divider />
+                </Box>
+              ))}
+            </Box>
           </List>
           <Box hidden={customMenus.length == 0}>
             <Grid container rowSpacing={1} columnSpacing={2}>
