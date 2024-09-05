@@ -85,7 +85,9 @@ function App() {
   const onOpenClick = async () => {
     await via.Close();
     await via.Open(
-      () => {},
+      () => {
+        setLoading(true);
+      },
       () => {
         setVialJson(undefined);
         setCustomMenus([]);
@@ -96,7 +98,6 @@ function App() {
         setKbName("");
       },
     );
-    setLoading(true);
     try {
       const version = await via.GetProtocolVersion();
       await via.GetVialKeyboardId(); // enable vial mode of BMP
@@ -386,7 +387,9 @@ function App() {
               </List>
             </div>
             <Divider />
-            <ListSubheader>Custom settings</ListSubheader>
+            <Box hidden={customMenus.length == 0}>
+              <ListSubheader>Custom settings</ListSubheader>
+            </Box>
             <Box sx={{ ml: 2 }}>
               {customMenus.map((top) => (
                 <Box key={top.label}>
