@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -11,7 +12,6 @@ import {
   ListItemButton,
   ListItemText,
   ListSubheader,
-  Toolbar,
 } from "@mui/material";
 import * as Hjson from "hjson";
 import { useEffect, useRef, useState } from "react";
@@ -63,10 +63,10 @@ function App() {
   const [customValues, setCustomValues] = useState<{ [id: string]: number }>({});
   const [customValueId, setCustomValueId] = useState<[string, number, number, number?][]>([]);
   const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [kbName, setKbName] = useState("");
   const [customEraseDialogOpen, setCustomEraseDialogOpen] = useState(false);
   const [quantumEraseDialogOpen, setQuantumEraseDialogOpen] = useState(false);
-  const customFileInputRef = useRef<HTMLInputElement>(null);
   const vialFileInputRef = useRef<HTMLInputElement>(null);
   const [quantumValues, setQuantumValues] = useState<{ [id: string]: number }>({});
 
@@ -87,29 +87,37 @@ function App() {
   const onOpenClick = async () => {
     await via.Close();
     await via.Open(
-      () => {
-        setConnected(true);
-      },
+      () => {},
       () => {
         setVialJson(undefined);
         setCustomMenus([]);
         setActiveMenu(undefined);
         setCustomValues({});
         setConnected(false);
+        setLoading(false);
         setKbName("");
       },
     );
-    const version = await via.GetProtocolVersion();
-    await via.GetVialKeyboardId(); // enable vial mode of BMP
-    console.log(`via protocol version:${version}`);
-    const compressed = await via.GetVialCompressedDefinition();
+    setLoading(true);
+    try {
+      const version = await via.GetProtocolVersion();
+      await via.GetVialKeyboardId(); // enable vial mode of BMP
+      console.log(`via protocol version:${version}`);
+    } catch {
+      via.Close();
+      alert("Failed to open the keyboard");
+      setLoading(false);
+      return;
+    }
 
     let decompressed: Uint8Array;
     try {
+      const compressed = await via.GetVialCompressedDefinition();
       decompressed = xz_decompress(compressed);
     } catch {
       via.Close();
       alert("Failed to open the keyboard");
+      setLoading(false);
       return;
     }
 
@@ -125,7 +133,7 @@ function App() {
     const dynamicEntryCount = await via.GetDynamicEntryCountAll();
     setDynamicEntryCount(dynamicEntryCount);
 
-    const customValueId = (parsed.menus as MenuItemProperties[]).flatMap((top) =>
+    const customValueId = ((parsed?.menus ?? []) as MenuItemProperties[]).flatMap((top) =>
       top.content.reduce((prev: [string, number, number, number?][], section) => {
         section.content.forEach((content) => {
           if ("type" in content) {
@@ -142,7 +150,10 @@ function App() {
       }, []),
     );
     setCustomValueId(customValueId);
-    getCustomValues(customValueId);
+    await getCustomValues(customValueId);
+
+    setConnected(true);
+    setLoading(false);
   };
 
   const onVialSaveClick = async () => {
@@ -213,29 +224,6 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const onDownloadJsonClick = async () => {
-    downloadData(JSON.stringify(customValues, null, 4), `${kbName}_custom_config.json`);
-  };
-
-  const onUploadJsonClick = async () => {
-    customFileInputRef.current?.click();
-  };
-
-  const onCustomJsonUploaded = async (json: string) => {
-    try {
-      const parsedJson = Hjson.parse(json);
-      console.log(parsedJson);
-      const loadedCustomValues = { ...customValues, ...parsedJson };
-      setCustomValues(loadedCustomValues);
-      for (const element of customValueId) {
-        await via.SetCustomValue(element.slice(1) as number[], loadedCustomValues[element[0]]);
-      }
-    } catch (error) {
-      console.error("Error parsing JSON:", error);
-      alert("Invalid JSON file.");
-    }
-  };
-
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
     handler: (json: string) => void,
@@ -255,12 +243,52 @@ function App() {
     <>
       <Grid container spacing={2}>
         <Grid item xs={3}>
-          <Toolbar>
-            <Button onClick={onOpenClick} variant="contained">
-              Open
+          <Box>
+            <Button onClick={onOpenClick} variant="contained" sx={{ ml: 1, mb: 1, mt: 1 }}>
+              {loading ? <CircularProgress color="inherit" size={20} /> : "Open"}
             </Button>
-            <ListSubheader>{kbName}</ListSubheader>
-          </Toolbar>
+          </Box>
+          <Divider />
+          <ListSubheader>{kbName}</ListSubheader>
+          <Box hidden={!connected}>
+            <Grid container rowSpacing={1} columnSpacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{
+                    width: "100%",
+                    ml: 1,
+                    mb: 1,
+                  }}
+                  variant="contained"
+                  color="primary"
+                  onClick={onVialSaveClick}
+                >
+                  DL SETTING
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  sx={{
+                    width: "100%",
+                  }}
+                  variant="contained"
+                  color="primary"
+                  onClick={onVialUploadJsonClick}
+                >
+                  UP SETTING
+                </Button>
+              </Grid>
+            </Grid>
+            <input
+              type="file"
+              accept=".json"
+              ref={vialFileInputRef}
+              style={{ display: "none" }}
+              onChange={(event) => {
+                handleFileChange(event, onVialJsonUploaded);
+              }}
+            />
+          </Box>
           <Divider />
           <List>
             <div style={{ display: connected ? "block" : "none" }}>
@@ -274,43 +302,6 @@ function App() {
                   <ListItemText primary="Keymap" />
                 </ListItemButton>
               </List>
-              <Grid container rowSpacing={1} columnSpacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Button
-                    sx={{
-                      width: "100%",
-                      ml: 1,
-                      mb: 1,
-                    }}
-                    variant="contained"
-                    color="primary"
-                    onClick={onVialSaveClick}
-                  >
-                    DL json
-                  </Button>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Button
-                    sx={{
-                      width: "100%",
-                    }}
-                    variant="contained"
-                    color="primary"
-                    onClick={onVialUploadJsonClick}
-                  >
-                    UP json
-                  </Button>
-                </Grid>
-              </Grid>
-              <input
-                type="file"
-                accept=".json"
-                ref={vialFileInputRef}
-                style={{ display: "none" }}
-                onChange={(event) => {
-                  handleFileChange(event, onVialJsonUploaded);
-                }}
-              />
             </div>
             <Divider />
             <div style={{ display: connected ? "block" : "none" }}>
@@ -343,7 +334,7 @@ function App() {
                         setQuantumEraseDialogOpen(true);
                       }}
                     >
-                      Erase
+                      Erase quantum
                     </Button>
                   </Grid>
                 </Grid>
@@ -376,60 +367,27 @@ function App() {
                   sx={{
                     width: "100%",
                     ml: 1,
+                    mb: 1,
                   }}
                   variant="contained"
                   color="primary"
                   onClick={onCustomSaveClick}
                 >
-                  Save
+                  Save custom
                 </Button>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Button
                   sx={{
                     width: "100%",
+                    mb: 1,
                   }}
                   variant="contained"
                   color="error"
                   onClick={onCustomEraseClick}
                 >
-                  Erase
+                  Erase custom
                 </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button
-                  sx={{
-                    width: "100%",
-                    ml: 1,
-                    mb: 1,
-                  }}
-                  variant="contained"
-                  color="primary"
-                  onClick={onDownloadJsonClick}
-                >
-                  DL json
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button
-                  sx={{
-                    width: "100%",
-                  }}
-                  variant="contained"
-                  color="primary"
-                  onClick={onUploadJsonClick}
-                >
-                  UP json
-                </Button>
-                <input
-                  type="file"
-                  accept=".json"
-                  ref={customFileInputRef}
-                  style={{ display: "none" }}
-                  onChange={(event) => {
-                    handleFileChange(event, onCustomJsonUploaded);
-                  }}
-                />
               </Grid>
             </Grid>
           </Box>

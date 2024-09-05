@@ -1,4 +1,4 @@
-import { Box, Button, Tab, Tabs } from "@mui/material";
+import { Box, Button, CircularProgress, Tab, Tabs } from "@mui/material";
 import { useEffect, useState } from "react";
 import { QuantumSettingDefinition } from "../services/quantumSettings";
 import { ViaKeyboard } from "../services/vialKeyboad";
@@ -80,8 +80,9 @@ export function QuantumSettingsSaveButton(props: {
   value: { [id: string]: number };
   connected: boolean;
 }) {
-  const sendQuantumSettings = (values: { [id: string]: number }) => {
-    props.via.SetQuantumSettingsValue(
+  const [writing, setWriting] = useState(false);
+  const sendQuantumSettings = async (values: { [id: string]: number }) => {
+    await props.via.SetQuantumSettingsValue(
       Object.entries(values).reduce((acc, value) => {
         const idNum = QuantumSettingDefinition.map((def) => def.content)
           .map((def) => def.map((d) => d.content))
@@ -101,13 +102,19 @@ export function QuantumSettingsSaveButton(props: {
       }}
       variant="contained"
       color="primary"
-      onClick={() => {
+      onClick={async () => {
         console.log("Save");
         console.log(props.value);
-        sendQuantumSettings(props.value);
+        setWriting(true);
+        try {
+          await sendQuantumSettings(props.value);
+        } catch (e) {
+          console.error(e);
+        }
+        setWriting(false);
       }}
     >
-      Save
+      {!writing ? "Save quantum" : <CircularProgress color="inherit" size={20} />}
     </Button>
   );
 }
