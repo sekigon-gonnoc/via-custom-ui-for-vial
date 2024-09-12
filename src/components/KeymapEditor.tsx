@@ -390,7 +390,7 @@ function convertToKeymapKeys(
 
           const isEncoder = col.split("\n")[9] === "e";
 
-          if (layoutOptions[layout[0]] == layout[1]) {
+          if ((layout?.length ?? 0) < 2 || layoutOptions[layout[0]] == layout[1]) {
             keys.push({
               ...current,
               matrix: keyPos,
