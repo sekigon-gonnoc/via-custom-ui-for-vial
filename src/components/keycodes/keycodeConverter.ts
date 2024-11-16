@@ -466,9 +466,9 @@ export class KeycodeConverter {
   }): TapDance {
     return {
       onTap: this.convertIntToKeycode(td.onTap),
-      onHold: this.convertIntToKeycode(td.onTap),
-      onDoubleTap: this.convertIntToKeycode(td.onTap),
-      onTapHold: this.convertIntToKeycode(td.onTap),
+      onHold: this.convertIntToKeycode(td.onHold),
+      onDoubleTap: this.convertIntToKeycode(td.onDoubleTap),
+      onTapHold: this.convertIntToKeycode(td.onTapHold),
       tappingTerm: td.tappingTerm,
     };
   }
