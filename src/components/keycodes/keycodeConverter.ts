@@ -238,6 +238,16 @@ export class KeycodeConverter {
         }),
       );
     }
+    this.tapKeycodeList.push(
+      ...[...Array(Math.min(this.layer, 16))].map((_, layer) => {
+        return {
+          group: "layer",
+          value: keycode_range.QK_LAYER_MOD.start + (layer << 5),
+          key: `Layer Mod(${layer}, mod)`,
+          label: `LM${layer}`,
+        };
+      }),
+    );
 
     this.tapKeycodeList = this.tapKeycodeList.map((k) => {
       return { ...k, label: k.label.length > 2 ? k.label.replace(/_/g, " ") : k.label };
@@ -255,7 +265,7 @@ export class KeycodeConverter {
 
     this.holdKeycodeList.push(DefaultQmkKeycode, this.modTapKeycodeBase);
     this.holdKeycodeList.push(
-      ...[...Array(this.layer)].map((_, layer) => {
+      ...[...Array(Math.min(this.layer, 16))].map((_, layer) => {
         return {
           label: `Layer Tap ${layer}`,
           value: keycode_range.QK_LAYER_TAP.start + (layer << 8),
@@ -281,6 +291,11 @@ export class KeycodeConverter {
       keycode.value <= this.keycode_range.QK_LAYER_TAP.end
     ) {
       return this.convertIntToKeycode(keycode.value & 0xff);
+    } else if (
+      this.keycode_range.QK_LAYER_MOD.start <= keycode.value &&
+      keycode.value <= this.keycode_range.QK_LAYER_MOD.end
+    ) {
+      return this.convertIntToKeycode(keycode.value & 0xffe0);
     } else {
       return keycode;
     }
@@ -316,6 +331,11 @@ export class KeycodeConverter {
       keycode.value <= this.keycode_range.QK_MOD_TAP.end
     ) {
       return (keycode.value >> 8) & 0x1f;
+    } else if (
+      this.keycode_range.QK_LAYER_MOD.start <= keycode.value &&
+      keycode.value <= this.keycode_range.QK_LAYER_MOD.end
+    ) {
+      return keycode.value & 0x1f;
     } else {
       return 0;
     }
@@ -332,6 +352,11 @@ export class KeycodeConverter {
       hold.value == 0
     ) {
       return this.convertIntToKeycode(tap.value | (mods << 8));
+    } else if (
+      this.keycode_range.QK_LAYER_MOD.start <= tap.value &&
+      tap.value <= this.keycode_range.QK_LAYER_MOD.end
+    ) {
+      return this.convertIntToKeycode((tap.value & 0xffe0) | mods);
     } else if (tap.value > this.keycode_range.QK_BASIC.end) {
       return this.convertIntToKeycode(tap.value);
     } else if (
@@ -403,6 +428,21 @@ export class KeycodeConverter {
             tap: val & 0xff,
             label: baseKeycode.label,
             shiftedLabel: baseKeycode.shiftedLabel,
+          };
+        },
+      )
+      .with(
+        P.number.between(
+          this.keycode_range.QK_LAYER_MOD.start,
+          this.keycode_range.QK_LAYER_MOD.end,
+        ),
+        (val) => {
+          const modLabel = modStringShort(val & 0x1f);
+          const modLongLabel = modStringLong(val & 0x1f);
+          return {
+            value: val,
+            key: `LM(${(val >> 5) & 0xf}, ${modLongLabel})`,
+            label: `LM(${(val >> 5) & 0xf}, ${modLabel})`,
           };
         },
       )
