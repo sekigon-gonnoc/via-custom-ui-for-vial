@@ -191,11 +191,14 @@ class VialKeyboard {
 
       for (const msg of messages.slice(sentLen, sentLen + QUEUE_SIZE)) {
         await this.hid.write(Uint8Array.from(msg));
+        await this.sleep(10);
       }
       sentLen += messages.slice(sentLen, sentLen + QUEUE_SIZE).length;
+      await waitBufferFilled(sentLen - 1, timeoutMs);
 
       while (sentLen < commandCount) {
         await this.hid.write(Uint8Array.from(messages[sentLen]));
+        await this.sleep(4);
         sentLen++;
         await waitBufferFilled(sentLen - 1, timeoutMs);
       }
