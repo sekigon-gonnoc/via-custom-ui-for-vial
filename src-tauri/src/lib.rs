@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ffi::CString, sync::Mutex};
 
-use hidapi::{HidApi, HidDevice};
+use hidapi::{DeviceInfo, HidApi, HidDevice};
 use serde::{Deserialize, Serialize};
 use tauri_plugin_log::{Target, TargetKind};
 
@@ -8,6 +8,17 @@ use tauri_plugin_log::{Target, TargetKind};
 struct HidDeviceId {
     path: String,
     label: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct HidDeviceListItem {
+    name: String,
+    vid: u16,
+    pid: u16,
+    opened: bool,
+    usage: [u16; 1],
+    #[serde(rename = "usagePage")]
+    usage_page: [u16; 1],
 }
 
 #[derive(Serialize, Deserialize)]
@@ -20,10 +31,41 @@ struct HidDeviceFilter {
 
 struct HidDeviceState {
     dict: Mutex<HashMap<String, HidDevice>>,
+    device_list: Mutex<Vec<String>>,
 }
 
 fn new_hidapi() -> HidApi {
     HidApi::new().expect("Failed to create `HidApi`")
+}
+
+#[tauri::command]
+fn hid_get_devices(state: tauri::State<'_, HidDeviceState>) -> Vec<HidDeviceListItem> {
+    println!("get_devices()");
+    let hidapi = new_hidapi();
+    let devs: Vec<_> = hidapi.device_list().collect();
+    let list = devs
+        .iter()
+        .map(|d| HidDeviceListItem {
+            name: d.product_string().unwrap_or("").to_string(),
+            vid: d.vendor_id(),
+            pid: d.product_id(),
+            opened: state
+                .dict
+                .lock()
+                .unwrap()
+                .contains_key(&d.path().to_str().unwrap_or("").to_string()),
+            usage: [d.usage()],
+            usage_page: [d.usage_page()],
+        })
+        .collect();
+    state.device_list.lock().unwrap().clear();
+
+    let mut paths: Vec<String> = devs
+        .iter()
+        .map(|d| d.path().to_str().unwrap_or("").to_string())
+        .collect();
+    state.device_list.lock().unwrap().append(&mut paths);
+    list
 }
 
 #[tauri::command]
@@ -111,15 +153,21 @@ fn hid_read(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new().targets([
-            Target::new(TargetKind::Stdout),
-            Target::new(TargetKind::LogDir { file_name: None }),
-            Target::new(TargetKind::Webview),
-        ]).build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::LogDir { file_name: None }),
+                    Target::new(TargetKind::Webview),
+                ])
+                .build(),
+        )
         .manage(HidDeviceState {
             dict: Mutex::new(HashMap::new()),
+            device_list: Mutex::new(Vec::<String>::new()),
         })
         .invoke_handler(tauri::generate_handler![
+            hid_get_devices,
             hid_request_device,
             hid_open_device,
             hid_write,
