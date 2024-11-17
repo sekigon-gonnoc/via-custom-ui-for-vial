@@ -29,7 +29,7 @@ import {
   VialKeyboardSetAllConfig,
 } from "./services/vialKeyboardConfig";
 
-const isTauri = import.meta.env.TAURI_PLATFORM !== undefined;
+const isTauri = import.meta.env.TAURI_ENV_PLATFORM !== undefined;
 
 if (!isTauri && !(navigator as any).hid) {
   alert("Please use chrome/edge");
