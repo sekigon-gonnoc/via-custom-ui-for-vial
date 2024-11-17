@@ -97,16 +97,31 @@ fn hid_request_device(filters: Vec<HidDeviceFilter>) -> Vec<HidDeviceId> {
 
 #[tauri::command]
 fn hid_open_device(
-    device: HidDeviceId,
+    device_index: usize,
     state: tauri::State<'_, HidDeviceState>,
 ) -> Result<(), String> {
     let hidapi = new_hidapi();
-    let hidres = hidapi.open_path(CString::new(device.path.as_str()).unwrap().as_c_str());
+    let path = CString::new(
+        state
+            .device_list
+            .lock()
+            .unwrap()
+            .get(device_index)
+            .unwrap()
+            .as_str(),
+    )
+    .unwrap();
+    let hidres = hidapi.open_path(path.as_c_str());
 
     match hidres {
         Err(e) => Err(format!("{:?}", e)),
         Ok(dev) => {
-            state.dict.lock().unwrap().entry(device.path).or_insert(dev);
+            state
+                .dict
+                .lock()
+                .unwrap()
+                .entry(path.to_str().unwrap().to_string())
+                .or_insert(dev);
             Ok(())
         }
     }

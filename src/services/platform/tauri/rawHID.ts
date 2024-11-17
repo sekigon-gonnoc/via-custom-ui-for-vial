@@ -31,6 +31,31 @@ class WebRawHID implements WebUsbComInterface {
 
     return devices;
   }
+
+  async open(deviceIndex: number, onConnect: () => void | null, param: object): Promise<void> {
+    if (deviceIndex >= 0) {
+      try {
+        await invoke("hid_open_device", { deviceIndex: deviceIndex });
+      } catch (e) {
+        console.log(e);
+        throw e
+      }
+    }else {
+        throw "unknown index";
+    }
+  }
+
+  async close(): Promise<void> {
+      
+  }
+
+  async setReceiveCallback(recvHandler: ((msg: Uint8Array) => void) | null): void {
+      
+  }
+
+  async setCloseCallback(handler: () => void | null): void {
+      
+  }
 }
 
 export { WebRawHID };
