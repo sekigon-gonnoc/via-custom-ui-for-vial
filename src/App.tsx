@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -17,6 +16,7 @@ import * as Hjson from "hjson";
 import { useEffect, useRef, useState } from "react";
 import { match, P } from "ts-pattern";
 import "./App.css";
+import { KeyboardSelector } from "./components/KeyboardSelector";
 import { KeymapEditor, KeymapProperties } from "./components/KeymapEditor";
 import { QuantumSettingsEditor } from "./components/QuantumSettingsEditor";
 import { MenuItemProperties, MenuSectionProperties, ViaMenuItem } from "./components/ViaMenuItem";
@@ -67,11 +67,28 @@ function App() {
   const [quantumEraseDialogOpen, setQuantumEraseDialogOpen] = useState(false);
   const vialFileInputRef = useRef<HTMLInputElement>(null);
   const [quantumValues, setQuantumValues] = useState<{ [id: string]: number }>({});
+  const [deviceList, setDeviceList] = useState<{ name: string; index: number; opened: boolean }[]>(
+    [],
+  );
+  const [deviceIndex, setDeviceIndex] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     // load wasm
     init();
+    (async () => {
+      setDeviceList(await updateDeviceList());
+    })();
   }, []);
+
+  const updateDeviceList = async () => {
+    return (await via.GetDeviceList()).map((d) => {
+      return {
+        name: `${d.name}(${("0000" + d.vid.toString(16)).slice(-4)}:${("0000" + d.pid.toString(16)).slice(-4)})`,
+        index: d.index,
+        opened: d.opened,
+      };
+    });
+  };
 
   const getCustomValues = async (_customValueId: typeof customValueId) => {
     const buffer = await via.GetCustomValue(_customValueId.map((v) => v.slice(1) as number[]));
@@ -82,9 +99,10 @@ function App() {
     console.log(customValues);
   };
 
-  const onOpenClick = async () => {
+  const openKeyboard = async (deviceIndex: number) => {
     await via.Close();
     await via.Open(
+      deviceIndex ?? -1,
       () => {
         setLoading(true);
       },
@@ -98,6 +116,12 @@ function App() {
         setKbName("");
       },
     );
+
+    const deviceList = await updateDeviceList();
+    setDeviceList(deviceList);
+    const newIdx = deviceList.find((d) => d.opened)?.index;
+    setDeviceIndex(newIdx);
+
     try {
       const version = await via.GetProtocolVersion();
       await via.GetVialKeyboardId(); // enable vial mode of BMP
@@ -281,9 +305,11 @@ function App() {
       <Grid container spacing={2}>
         <Grid item xs={3}>
           <Box>
-            <Button onClick={onOpenClick} variant="contained" sx={{ ml: 1, mb: 1, mt: 1 }}>
-              {loading ? <CircularProgress color="inherit" size={20} /> : "Open"}
-            </Button>
+            <KeyboardSelector
+              deviceIndex={deviceIndex ?? -2}
+              deviceList={deviceList}
+              onChange={(idx) => openKeyboard(idx)}
+            />
           </Box>
           <Divider />
           <ListSubheader>{kbName}</ListSubheader>

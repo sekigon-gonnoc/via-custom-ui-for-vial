@@ -30,12 +30,38 @@ class WebRawHID implements WebUsbComInterface {
     navigator.hid.addEventListener("disconnect", this.closeCallback.bind(this));
   }
 
-  async open(onConnect: () => void | null, param: HIDDeviceFilter[]) {
-    const request = await navigator.hid.requestDevice({
-      filters: param,
+  async getDeviceList(): Promise<
+    {
+      name: string;
+      vid: number;
+      pid: number;
+      opened: boolean;
+      usage: number[];
+      usagePage: number[];
+    }[]
+  > {
+    const devices = await navigator.hid.getDevices();
+    return devices.map((d) => {
+      return {
+        name: d.productName,
+        vid: d.vendorId,
+        pid: d.productId,
+        opened: d.opened,
+        usage: d.collections.map((c) => c.usage ?? 0),
+        usagePage: d.collections.map((c) => c.usagePage ?? 0),
+      };
     });
-    console.log(request);
-    this.port = request[0];
+  }
+
+  async open(deviceIndex: number, onConnect: () => void | null, param: HIDDeviceFilter[]) {
+    const devices = await navigator.hid.getDevices();
+    this.port =
+      devices[deviceIndex] ??
+      (
+        await navigator.hid.requestDevice({
+          filters: param,
+        })
+      )[0];
 
     if (!this.port) {
       return;

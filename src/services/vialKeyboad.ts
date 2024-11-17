@@ -130,9 +130,21 @@ class VialKeyboard {
     }
   }
 
-  async Open(openCallback: () => void = () => {}, closeCallback: () => void = () => {}) {
+  async GetDeviceList() {
+    return (await this.hid.getDeviceList())
+      .map((d, idx) => {
+        return { ...d, index: idx };
+      })
+      .filter((d) => d.usage.includes(0x61) && d.usagePage.includes(0xff60));
+  }
+
+  async Open(
+    deviceIndex: number,
+    openCallback: () => void = () => {},
+    closeCallback: () => void = () => {},
+  ) {
     if (!this.hid.connected) {
-      await this.hid.open(openCallback, [{ usagePage: 0xff60, usage: 0x61 }]);
+      await this.hid.open(deviceIndex, openCallback, [{ usagePage: 0xff60, usage: 0x61 }]);
       this.hid.setReceiveCallback(this.receiveCallback.bind(this));
       this.hid.setCloseCallback(closeCallback);
     }
