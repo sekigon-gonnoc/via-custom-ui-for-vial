@@ -1,4 +1,4 @@
-import { WebUsbComInterface } from "./webUsbComInterface";
+import { WebUsbComInterface } from "../../webUsbComInterface";
 
 class WebRawHID implements WebUsbComInterface {
   private receiveCallback: ((msg: HIDInputReportEvent) => void) | null = null;

@@ -1,4 +1,4 @@
-import { WebRawHID } from "./webRawHID";
+import { WebRawHID } from "webRawHID";
 
 export interface VialDefinition {
   name: string;

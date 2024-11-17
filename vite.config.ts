@@ -1,10 +1,19 @@
 import react from '@vitejs/plugin-react';
+import path from 'path';
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   base: process.env.TAURI_ENV_PLATFORM === undefined ? "/via-custom-ui-for-vial/" : "./",
+  resolve: {
+    alias: {
+      webRawHID:
+        process.env.TAURI_ENV_PLATFORM === undefined
+          ? path.resolve(__dirname, "src/services/platform/web/webRawHID.ts")
+          : path.resolve(__dirname, "src/services/platform/tauri/rawHID.ts"),
+    },
+  },
   // prevent vite from obscuring rust errors
   clearScreen: false,
   // Tauri expects a fixed port, fail if that port is not available
