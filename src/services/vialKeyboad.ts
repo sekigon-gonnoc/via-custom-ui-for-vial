@@ -160,7 +160,7 @@ class VialKeyboard {
 
   async Command(msg: ArrayLike<number>): Promise<Uint8Array> {
     return await navigator.locks.request("vial-keyboard", async () => {
-      if (!this.hid.connected) await this.Open();
+      if (!this.hid.connected) await this.Open(-1);
       const send = Uint8Array.from(msg);
       try {
         await this.hid.write(Uint8Array.from(send));
