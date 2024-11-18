@@ -1,4 +1,9 @@
-use std::{collections::HashMap, ffi::CString, sync::Mutex};
+use std::{
+    collections::HashMap,
+    ffi::CString,
+    io::Write,
+    sync::{atomic::AtomicBool, Arc, Mutex},
+};
 
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use serde::{Deserialize, Serialize};
@@ -37,8 +42,13 @@ struct InputReport {
     data: Vec<u8>,
 }
 
+struct ActiveHidDevice {
+    device: HidDevice,
+    read_loop_running: Arc<AtomicBool>,
+}
+
 struct HidDeviceState {
-    dict: Mutex<HashMap<String, HidDevice>>,
+    active: Mutex<HashMap<String, ActiveHidDevice>>,
     device_list: Mutex<Vec<String>>,
 }
 
@@ -81,7 +91,7 @@ fn hid_get_devices(state: tauri::State<'_, HidDeviceState>) -> Vec<HidDeviceList
             vid: d.vendor_id(),
             pid: d.product_id(),
             opened: state
-                .dict
+                .active
                 .lock()
                 .unwrap()
                 .contains_key(&d.path().to_str().unwrap_or("").to_string()),
@@ -117,19 +127,26 @@ fn hid_open_device(
     )
     .unwrap();
 
-    if let Some((path, dev)) = state
-        .dict
+    if let Some((path, active_hid)) = state
+        .active
         .lock()
         .unwrap()
         .get_key_value(&path.to_str().unwrap().to_string())
     {
-        println!("{} is already opened", path);
-        let report_id = get_report_id(&dev);
-        return Ok(HidDeviceId {
-            path: path.clone(),
-            report_id: report_id,
-        });
+        if (active_hid
+            .read_loop_running
+            .load(std::sync::atomic::Ordering::SeqCst))
+        {
+            println!("{} is already opened", path);
+            let report_id = get_report_id(&active_hid.device);
+            return Ok(HidDeviceId {
+                path: path.clone(),
+                report_id: report_id,
+            });
+        }
     }
+
+    println!("Open {:?}", path);
 
     let path2 = path.clone();
     let hidres = hidapi.open_path(path.as_c_str());
@@ -138,16 +155,33 @@ fn hid_open_device(
         Err(e) => Err(format!("{:?}", e)),
         Ok(dev) => {
             let report_id = get_report_id(&dev);
-            state
-                .dict
+            state.active.lock().unwrap().insert(
+                path.to_str().unwrap().to_string(),
+                ActiveHidDevice {
+                    device: dev,
+                    read_loop_running: Arc::new(AtomicBool::new(true)),
+                },
+            );
+
+            let flag_cloned = if let Some((_, active_hid)) = state
+                .active
                 .lock()
                 .unwrap()
-                .entry(path.to_str().unwrap().to_string())
-                .or_insert(dev);
+                .get_key_value(&path.to_str().unwrap().to_string())
+            {
+                active_hid
+                    .read_loop_running
+                    .store(true, std::sync::atomic::Ordering::SeqCst);
+                Some(active_hid.read_loop_running.clone())
+            } else {
+                None
+            };
+
             std::thread::spawn(move || {
                 let hidres = hidapi.open_path(path.as_c_str());
                 if let Ok(dev) = hidres {
                     println!("start read loop");
+                    let flag = flag_cloned.unwrap();
                     loop {
                         let mut buf = [0u8; 65];
                         let res = dev.read(&mut buf).and_then(|d| {
@@ -164,7 +198,11 @@ fn hid_open_device(
                         });
 
                         if let Err(e) = res {
+                            flag.store(false, std::sync::atomic::Ordering::SeqCst);
                             println!("{:?}", e);
+                        };
+
+                        if !flag.load(std::sync::atomic::Ordering::SeqCst) {
                             app.emit(
                                 "onclose",
                                 InputReport {
@@ -192,11 +230,12 @@ fn hid_write(
     state: tauri::State<'_, HidDeviceState>,
 ) -> Result<(), String> {
     match state
-        .dict
+        .active
         .lock()
         .unwrap()
         .get(&device)
         .unwrap()
+        .device
         .write(&data)
     {
         Err(e) => {
@@ -214,11 +253,12 @@ fn hid_read(
 ) -> Result<Vec<u8>, String> {
     let mut buf = [0u8; 65];
     match state
-        .dict
+        .active
         .lock()
         .unwrap()
         .get(&device.path)
         .unwrap()
+        .device
         .read(&mut buf)
     {
         Err(e) => Err(format!("{:?}", e)),
@@ -239,7 +279,7 @@ pub fn run() {
                 .build(),
         )
         .manage(HidDeviceState {
-            dict: Mutex::new(HashMap::new()),
+            active: Mutex::new(HashMap::new()),
             device_list: Mutex::new(Vec::<String>::new()),
         })
         .invoke_handler(tauri::generate_handler![
