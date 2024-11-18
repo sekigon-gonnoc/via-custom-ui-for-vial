@@ -2,12 +2,14 @@ use std::{collections::HashMap, ffi::CString, sync::Mutex};
 
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
 use tauri_plugin_log::{Target, TargetKind};
 
 #[derive(Serialize, Deserialize)]
 struct HidDeviceId {
     path: String,
-    label: String,
+    #[serde(rename = "reportId")]
+    report_id: u8,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -29,6 +31,12 @@ struct HidDeviceFilter {
     usage: Option<u16>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+struct InputReport {
+    path: String,
+    data: Vec<u8>,
+}
+
 struct HidDeviceState {
     dict: Mutex<HashMap<String, HidDevice>>,
     device_list: Mutex<Vec<String>>,
@@ -36,6 +44,27 @@ struct HidDeviceState {
 
 fn new_hidapi() -> HidApi {
     HidApi::new().expect("Failed to create `HidApi`")
+}
+
+fn get_report_id(desc: &[u8]) -> u8 {
+    let len = desc.len();
+    let mut idx = 0;
+    while idx < len {
+        let item = desc[idx];
+        if item == 0x85 {
+            return *desc.get(idx + 1).unwrap_or(&0);
+        }
+
+        idx = match item & 0x03 {
+            0 => idx + 1,
+            1 => idx + 2,
+            2 => idx + 3,
+            3 => idx + 4,
+            _ => idx + 1,
+        };
+    }
+
+    return 0;
 }
 
 #[tauri::command]
@@ -69,37 +98,11 @@ fn hid_get_devices(state: tauri::State<'_, HidDeviceState>) -> Vec<HidDeviceList
 }
 
 #[tauri::command]
-fn hid_request_device(filters: Vec<HidDeviceFilter>) -> Vec<HidDeviceId> {
-    println!("request_device()");
-    let hidapi = new_hidapi();
-    let devs: Vec<_> = hidapi.device_list().collect();
-    devs.iter()
-        .filter(|d| {
-            filters.iter().any(|filter| {
-                (filter.usage.is_none() || filter.usage.unwrap() == d.usage())
-                    && (filter.usage_page.is_none() || filter.usage_page.unwrap() == d.usage_page())
-                    && (filter.vendor_id.is_none() || filter.vendor_id.unwrap() == d.vendor_id())
-                    && (filter.product_id.is_none() || filter.product_id.unwrap() == d.product_id())
-            })
-        })
-        .map(|d| HidDeviceId {
-            path: d.path().to_str().unwrap().to_string(),
-            label: format!(
-                "{}({:04X}:{:04X})({:?})",
-                d.product_string().unwrap_or(""),
-                d.vendor_id(),
-                d.product_id(),
-                d.bus_type()
-            ),
-        })
-        .collect()
-}
-
-#[tauri::command]
 fn hid_open_device(
     device_index: usize,
+    app: AppHandle,
     state: tauri::State<'_, HidDeviceState>,
-) -> Result<(), String> {
+) -> Result<HidDeviceId, String> {
     let hidapi = new_hidapi();
     let path = CString::new(
         state
@@ -111,25 +114,55 @@ fn hid_open_device(
             .as_str(),
     )
     .unwrap();
+    let path2 = path.clone();
     let hidres = hidapi.open_path(path.as_c_str());
 
     match hidres {
         Err(e) => Err(format!("{:?}", e)),
         Ok(dev) => {
+            let mut desc = [0u8; hidapi::MAX_REPORT_DESCRIPTOR_SIZE];
+            let size = dev.get_report_descriptor(&mut desc).unwrap_or(0);
+            let report_id = get_report_id(&desc[0..size]);
             state
                 .dict
                 .lock()
                 .unwrap()
                 .entry(path.to_str().unwrap().to_string())
                 .or_insert(dev);
-            Ok(())
+            std::thread::spawn(move || {
+                let hidres = hidapi.open_path(path.as_c_str());
+                if let Ok(dev) = hidres {
+                    println!("start read loop");
+                    loop {
+                        let mut buf = [0u8; 65];
+                        dev.read(&mut buf)
+                            .and_then(|d| {
+                                println!("report received");
+                                app.emit(
+                                    "oninputreport",
+                                    InputReport {
+                                        path: path.to_str().unwrap().to_string(),
+                                        data: buf[0..d].into(),
+                                    },
+                                )
+                                .unwrap();
+                                Ok(())
+                            })
+                            .unwrap();
+                    }
+                }
+            });
+            Ok(HidDeviceId {
+                path: path2.to_str().unwrap().to_string(),
+                report_id: report_id,
+            })
         }
     }
 }
 
 #[tauri::command]
 fn hid_write(
-    device: HidDeviceId,
+    device: String,
     data: Vec<u8>,
     state: tauri::State<'_, HidDeviceState>,
 ) -> Result<(), String> {
@@ -137,11 +170,14 @@ fn hid_write(
         .dict
         .lock()
         .unwrap()
-        .get(&device.path)
+        .get(&device)
         .unwrap()
         .write(&data)
     {
-        Err(e) => Err(format!("{:?}", e)),
+        Err(e) => {
+            println!("fail");
+            Err(format!("{:?}", e))
+        }
         Ok(_s) => Ok(()),
     }
 }
@@ -183,7 +219,6 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             hid_get_devices,
-            hid_request_device,
             hid_open_device,
             hid_write,
             hid_read
