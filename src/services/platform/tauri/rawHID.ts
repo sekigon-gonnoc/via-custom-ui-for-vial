@@ -6,7 +6,7 @@ class WebRawHID implements WebUsbComInterface {
   private devicePath = "";
   private _connected = false;
   private reportId = 0;
-  private unlisten = ()=>{};
+  private unlisten = () => {};
   private receiveCallback: ((msg: Uint8Array) => void) | null = (msg) => {};
   get connected() {
     return this._connected;

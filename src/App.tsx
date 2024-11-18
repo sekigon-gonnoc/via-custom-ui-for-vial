@@ -128,7 +128,8 @@ function App() {
       const version = await via.GetProtocolVersion();
       await via.GetVialKeyboardId(); // enable vial mode of BMP
       console.log(`via protocol version:${version}`);
-    } catch {
+    } catch (e) {
+      console.error(e);
       via.Close();
       alert("Failed to open the keyboard");
       setLoading(false);
@@ -308,9 +309,13 @@ function App() {
         <Grid item xs={3}>
           <Box>
             <KeyboardSelector
-              deviceIndex={deviceIndex ?? -2}
+              deviceIndex={deviceIndex}
               deviceList={deviceList}
               onChange={(idx) => openKeyboard(idx)}
+              onOpen={async () => {
+                const deviceList = await updateDeviceList();
+                setDeviceList(deviceList);
+              }}
             />
           </Box>
           <Divider />
