@@ -7,7 +7,7 @@ class WebRawHID implements WebUsbComInterface {
   private _connected = false;
   private reportId = 0;
   private unlisten = () => {};
-  private receiveCallback: ((msg: Uint8Array) => void) | null = (msg) => {};
+  private receiveCallback: ((msg: Uint8Array) => void) | null = (_msg) => {};
   get connected() {
     return this._connected;
   }
@@ -38,7 +38,7 @@ class WebRawHID implements WebUsbComInterface {
     return devices;
   }
 
-  async open(deviceIndex: number, onConnect: () => void | null, param: object): Promise<void> {
+  async open(deviceIndex: number, onConnect: () => void | null, _param: object): Promise<void> {
     if (this._connected) return;
     if (deviceIndex >= 0) {
       try {
@@ -49,12 +49,12 @@ class WebRawHID implements WebUsbComInterface {
         this.devicePath = device.path;
         this.reportId = device.reportId;
         this.unlisten = await listen("oninputreport", (event) => {
-          if (event.payload.path == this.devicePath) {
+          if ((event as any).payload.path == this.devicePath) {
             console.log(event.payload);
             if (this.reportId == 0) {
-              this.receiveCallback?.(new Uint8Array(event.payload.data));
+              this.receiveCallback?.(new Uint8Array((event as any).payload.data));
             } else {
-              this.receiveCallback?.(new Uint8Array(event.payload.data.slice(1)));
+              this.receiveCallback?.(new Uint8Array((event as any).payload.data.slice(1)));
             }
           }
         });
@@ -82,11 +82,15 @@ class WebRawHID implements WebUsbComInterface {
     });
   }
 
-  async setReceiveCallback(recvHandler: ((msg: Uint8Array) => void) | null): void {
+  setReceiveCallback(recvHandler: ((msg: Uint8Array) => void) | null): void {
     this.receiveCallback = recvHandler;
   }
 
-  async setCloseCallback(handler: () => void | null): void {}
+  setCloseCallback(_handler: () => void | null): void {}
+
+  async writeString(_msg: string): Promise<void> {
+    
+  }
 }
 
 export { WebRawHID };
