@@ -6,6 +6,7 @@ class WebRawHID implements WebUsbComInterface {
   private devicePath = "";
   private _connected = false;
   private reportId = 0;
+  private unlisten = ()=>{};
   private receiveCallback: ((msg: Uint8Array) => void) | null = (msg) => {};
   get connected() {
     return this._connected;
@@ -44,12 +45,17 @@ class WebRawHID implements WebUsbComInterface {
         const device: { path: string; reportId: number } = await invoke("hid_open_device", {
           deviceIndex: deviceIndex,
         });
+        onConnect();
         this.devicePath = device.path;
         this.reportId = device.reportId;
-        const unlisten = await listen("oninputreport", (event) => {
+        this.unlisten = await listen("oninputreport", (event) => {
           if (event.payload.path == this.devicePath) {
             console.log(event.payload);
-            this.receiveCallback?.(new Uint8Array(event.payload.data.slice(1)));
+            if (this.reportId == 0) {
+              this.receiveCallback?.(new Uint8Array(event.payload.data));
+            } else {
+              this.receiveCallback?.(new Uint8Array(event.payload.data.slice(1)));
+            }
           }
         });
         this._connected = true;
@@ -63,6 +69,7 @@ class WebRawHID implements WebUsbComInterface {
   }
 
   async close(): Promise<void> {
+    this.unlisten();
     if (this._connected) this._connected = false;
   }
 

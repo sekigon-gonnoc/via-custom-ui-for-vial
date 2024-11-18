@@ -46,10 +46,12 @@ fn new_hidapi() -> HidApi {
     HidApi::new().expect("Failed to create `HidApi`")
 }
 
-fn get_report_id(desc: &[u8]) -> u8 {
-    let len = desc.len();
+fn get_report_id(hid: &HidDevice) -> u8 {
+    let mut desc = [0u8; hidapi::MAX_REPORT_DESCRIPTOR_SIZE];
+    let size = hid.get_report_descriptor(&mut desc).unwrap_or(0);
+
     let mut idx = 0;
-    while idx < len {
+    while idx < size {
         let item = desc[idx];
         if item == 0x85 {
             return *desc.get(idx + 1).unwrap_or(&0);
@@ -114,15 +116,28 @@ fn hid_open_device(
             .as_str(),
     )
     .unwrap();
+
+    if let Some((path, dev)) = state
+        .dict
+        .lock()
+        .unwrap()
+        .get_key_value(&path.to_str().unwrap().to_string())
+    {
+        println!("{} is already opened", path);
+        let report_id = get_report_id(&dev);
+        return Ok(HidDeviceId {
+            path: path.clone(),
+            report_id: report_id,
+        });
+    }
+
     let path2 = path.clone();
     let hidres = hidapi.open_path(path.as_c_str());
 
     match hidres {
         Err(e) => Err(format!("{:?}", e)),
         Ok(dev) => {
-            let mut desc = [0u8; hidapi::MAX_REPORT_DESCRIPTOR_SIZE];
-            let size = dev.get_report_descriptor(&mut desc).unwrap_or(0);
-            let report_id = get_report_id(&desc[0..size]);
+            let report_id = get_report_id(&dev);
             state
                 .dict
                 .lock()
@@ -135,20 +150,30 @@ fn hid_open_device(
                     println!("start read loop");
                     loop {
                         let mut buf = [0u8; 65];
-                        dev.read(&mut buf)
-                            .and_then(|d| {
-                                println!("report received");
-                                app.emit(
-                                    "oninputreport",
-                                    InputReport {
-                                        path: path.to_str().unwrap().to_string(),
-                                        data: buf[0..d].into(),
-                                    },
-                                )
-                                .unwrap();
-                                Ok(())
-                            })
+                        let res = dev.read(&mut buf).and_then(|d| {
+                            // println!("report received");
+                            app.emit(
+                                "oninputreport",
+                                InputReport {
+                                    path: path.to_str().unwrap().to_string(),
+                                    data: buf[0..d].into(),
+                                },
+                            )
                             .unwrap();
+                            Ok(())
+                        });
+
+                        if let Err(e) = res {
+                            println!("{:?}", e);
+                            app.emit(
+                                "onclose",
+                                InputReport {
+                                    path: path.to_str().unwrap().to_string(),
+                                    data: [].into(),
+                                },
+                            );
+                            return;
+                        }
                     }
                 }
             });
