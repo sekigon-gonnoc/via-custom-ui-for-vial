@@ -414,7 +414,7 @@ class VialKeyboard {
 
   async GetTapDance(ids: number[]) {
     const buffers = await this.BatchCommand(
-      ids.map((_, id) => [
+      ids.map((id) => [
         via_command_id.id_vial,
         vial_command_id.vial_dynamic_entry_op,
         dynamic_vial_id.dynamic_vial_tap_dance_get,
