@@ -373,6 +373,7 @@ function convertToKeymapKeys(
   };
 
   const keys: KeymapKeyProperties[] = [];
+  let firstKey = true;
   for (const row of props.layouts.keymap) {
     for (const col of row) {
       match(col)
@@ -391,6 +392,13 @@ function convertToKeymapKeys(
           const isEncoder = col.split("\n")[9] === "e";
 
           if ((layout?.length ?? 0) < 2 || layoutOptions[layout[0]] == layout[1]) {
+            if (firstKey) {
+              firstKey = false;
+              current.w = 1;
+              current.h = 1;
+              current.x = 0;
+              current.y = 0;
+            }
             keys.push({
               ...current,
               matrix: keyPos,
