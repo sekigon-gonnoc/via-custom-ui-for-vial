@@ -150,20 +150,24 @@ function MacroEntry(props: {
           const keycode = buffer[idx + 1];
           newActions[newActions.length - 1].push(buffer[idx], keycode);
           idx += 2;
+          newActions.push([]);
         } else if (buffer[idx] == 4) {
           const delay = buffer[idx + 1] - 1 + (buffer[idx + 2] - 1) * 255;
           newActions[newActions.length - 1].push(buffer[idx], delay);
           idx += 3;
+          newActions.push([]);
         } else if (5 <= buffer[idx] && buffer[idx] <= 7) {
           const keycode = buffer[idx + 1] | (buffer[idx + 2] << 8);
           newActions[newActions.length - 1].push(buffer[idx], keycode);
           idx += 3;
+          newActions.push([]);
         }
       } else {
         newActions[newActions.length - 1].push(buffer[idx]);
         idx += 1;
       }
     }
+    if (newActions[newActions.length - 1].length == 0) newActions.pop();
     return newActions;
   };
 
