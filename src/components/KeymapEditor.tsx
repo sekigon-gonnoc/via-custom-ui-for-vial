@@ -394,9 +394,6 @@ function convertToKeymapKeys(
           if ((layout?.length ?? 0) < 2 || layoutOptions[layout[0]] == layout[1]) {
             if (firstKey) {
               firstKey = false;
-              current.w = 1;
-              current.h = 1;
-              current.x = 0;
               current.y = 0;
             }
             keys.push({
@@ -430,6 +427,8 @@ function convertToKeymapKeys(
     current.x = 0;
     current.y += 1;
     current.y = current.r ? 0 : current.y;
+    current.w = 1;
+    current.h = 1;
   }
   return keys;
 }
