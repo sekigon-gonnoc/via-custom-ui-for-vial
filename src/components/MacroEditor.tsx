@@ -73,16 +73,27 @@ export function MacroEditor(props: {
       .map((action) => {
         if (action[0] == 1) {
           if (action[1] < 4) {
-            return action[2] > 0xff
-              ? [action[0], action[1] + 4, action[2] & 0xff, action[2] >> 8]
-              : [action[0], action[1], action[2] & 0xff];
+            if (action[2] == 0) return [];
+            else if (action[2] > 0xff) {
+              return [
+                action[0],
+                action[1] + 4,
+                action[2] & 0xff,
+                action[2] >> 8,
+              ];
+            } else {
+              return [action[0], action[1], action[2] & 0xff];
+            }
           } else if (action[1] == 4) {
             const upperbyte = Math.floor(action[2] / 255) + 1;
             return [action[0], action[1], action[2] - (upperbyte - 1) * 255 + 1, upperbyte];
           } else {
-            return action[2] > 0xff
-              ? [action[0], action[1], action[2] & 0xff, action[2] >> 8]
-              : [action[0], action[1] - 4, action[2] & 0xff];
+            if (action[2] == 0) return [];
+            else if (action[2] > 0xff) {
+              return [action[0], action[1], action[2] & 0xff, action[2] >> 8];
+            } else {
+              return [action[0], action[1] - 4, action[2] & 0xff];
+            }
           }
         } else {
           return action;
