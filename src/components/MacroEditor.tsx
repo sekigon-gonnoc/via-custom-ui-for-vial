@@ -144,6 +144,9 @@ function MacroEntry(props: {
     let idx = 0;
     while (idx < buffer.length) {
       if (buffer[idx] == 1) {
+        if (newActions[newActions.length - 1].length == 0) {
+          newActions.pop();
+        }
         newActions.push([buffer[idx]]);
         idx += 1;
         if (1 <= buffer[idx] && buffer[idx] <= 3) {
