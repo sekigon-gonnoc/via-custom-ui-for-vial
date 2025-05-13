@@ -1,12 +1,16 @@
 import { Box, Tab, Tabs, Tooltip } from "@mui/material";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { match, P } from "ts-pattern";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
+import { FocusedKeyContext } from "./KeymapEditor";
 
 const WIDTH_1U = 50;
 function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggable: boolean }) {
   const [isDragging, setIsDragging] = useState(false);
   const [showToolTip, setShowToolTip] = useState(false);
+
+  const focusContext = useContext(FocusedKeyContext);
+
   return (
     <Tooltip
       open={showToolTip}
@@ -59,7 +63,9 @@ function KeyListKey(props: { keycode: QmkKeycode; onClick?: () => void; draggabl
           setShowToolTip(false);
         }}
         onClick={() => {
-          if (props.onClick) {
+          if (focusContext.focusedKey && focusContext.onKeycodeChange) {
+            focusContext.onKeycodeChange(focusContext.focusedKey, props.keycode);
+          } else if (props.onClick) {
             setShowToolTip(false);
             props.onClick?.();
           }
@@ -109,25 +115,29 @@ export function KeycodeCatalog(props: {
             console.log("tab");
           }}
           variant="scrollable"
-          scrollButtons="auto"
+          scrollButtons={true}
+          sx={{ width: "100%", maxWidth: "100%" }}
         >
           {props.tab.map((tab) => (
-            <Tab key={tab.label} label={tab.label}></Tab>
+            <Tab key={tab.label} label={tab.label} className="keycode-catalog-tab"></Tab>
           ))}
         </Tabs>
       </Box>
       {props.tab.map((tab, index) => (
         <CustomTabPanel key={index} value={tabValue} index={index}>
           {tab.keygroup.map((keygroup) => (
-            <Box key={keygroup}>
+            <Box key={keygroup} sx={{ maxWidth: "100%", overflowX: "auto" }}>
               {props.keycodeConverter.getTapKeycodeList().some((k) => k.group === keygroup) ? (
                 <>
                   <Box sx={{ mt: 1 }}>{keygroup}</Box>
                   <Box
                     sx={{
                       display: "grid",
-                      gridTemplateColumns: `repeat(auto-fit, ${WIDTH_1U}px)`,
+                      gridTemplateColumns: `repeat(auto-fill, ${WIDTH_1U}px)`,
                       gap: "8px 5px",
+                      ml: 1,
+                      mb: 1,
+                      minWidth: "min-content",
                     }}
                   >
                     {props.keycodeConverter

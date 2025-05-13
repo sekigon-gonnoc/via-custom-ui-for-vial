@@ -1,5 +1,5 @@
 import { Box, Button, Grid, TextField } from "@mui/material";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
@@ -11,6 +11,7 @@ export function TapDanceEditor(props: {
   onBack: () => void;
 }) {
   const [tapDance, setTapDance] = useState<{ [id: string]: TapDanceValue }>({});
+  const boundaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     navigator.locks.request("load-tapdance", async () => {
@@ -36,7 +37,7 @@ export function TapDanceEditor(props: {
   };
 
   return (
-    <Box>
+    <Box ref={boundaryRef}>
       <Box>{`Edit TD${props.tapdanceIndex}`}</Box>
       <TapDanceEntry
         td={
@@ -71,6 +72,7 @@ interface TapDanceValue {
 function TapDanceEntry(props: {
   td: TapDanceValue;
   keycodeconverter: KeycodeConverter;
+  boundaryRef?: React.RefObject<HTMLDivElement>;
   onSave?: (td: TapDanceValue) => void;
   onBack?: () => void;
 }) {
@@ -185,6 +187,7 @@ function TapDanceEntry(props: {
         keycode={candidateKeycode}
         keycodeconverter={props.keycodeconverter}
         anchor={anchorEl}
+        boundary={props.boundaryRef?.current ?? null}
         onClickAway={() => {
           if (popupOpen) {
             setpopupOpen(false);

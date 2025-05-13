@@ -1,6 +1,6 @@
 import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
 import { Box, Button, IconButton, Stack, TextField } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter } from "./keycodes/keycodeConverter";
 import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
@@ -13,6 +13,7 @@ export function MacroEditor(props: {
   onBack: () => void;
 }) {
   const [macroData, setMacroData] = useState<{ [id: number]: number[] }>({});
+  const boundaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     navigator.locks.request("load-macro", async () => {
@@ -122,11 +123,12 @@ export function MacroEditor(props: {
   };
 
   return (
-    <Box>
+    <Box ref={boundaryRef}>
       <Box>{`Edit macro${props.macroIndex}`}</Box>
       <MacroEntry
         buffer={macroData[props.macroIndex] ?? []}
         keycodeConverter={props.keycodeConverter}
+        boundaryRef={boundaryRef}
         onSave={(actions: number[][]) => saveMacros(actions, props.macroIndex)}
         onBack={props.onBack}
       ></MacroEntry>
@@ -137,6 +139,7 @@ export function MacroEditor(props: {
 function MacroEntry(props: {
   buffer: number[];
   keycodeConverter: KeycodeConverter;
+  boundaryRef?: React.RefObject<HTMLDivElement>;
   onSave: (actions: number[][]) => void;
   onBack: () => void;
 }) {
@@ -279,6 +282,7 @@ function MacroEntry(props: {
         keycode={candidateKeycode}
         keycodeconverter={props.keycodeConverter}
         anchor={anchorEl}
+        boundary={props.boundaryRef?.current ?? null}
         onClickAway={() => {
           if (popupOpen) {
             setpopupOpen(false);

@@ -1,3 +1,4 @@
+import MenuIcon from "@mui/icons-material/Menu";
 import {
   Box,
   Button,
@@ -6,11 +7,14 @@ import {
   DialogContent,
   Divider,
   Grid,
+  IconButton,
   Link,
   List,
   ListItemButton,
   ListItemText,
   ListSubheader,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import * as Hjson from "hjson";
 import { useEffect, useRef, useState } from "react";
@@ -22,7 +26,12 @@ import { QuantumSettingsEditor } from "./components/QuantumSettingsEditor";
 import { MenuItemProperties, MenuSectionProperties, ViaMenuItem } from "./components/ViaMenuItem";
 import init, { xz_decompress } from "./pkg";
 import { QuantumSettingDefinition } from "./services/quantumSettings";
-import { DynamicEntryCount, ViaKeyboard, VialDefinition } from "./services/vialKeyboad";
+import {
+  ConnectionType,
+  DynamicEntryCount,
+  ViaKeyboard,
+  VialDefinition,
+} from "./services/vialKeyboad";
 import {
   VialKeyboardConfig,
   VialKeyboardGetAllConfig,
@@ -31,11 +40,14 @@ import {
 
 const isTauri = import.meta.env.TAURI_ENV_PLATFORM !== undefined;
 
-if (!isTauri && !(navigator as any).hid) {
-  alert("Please use chrome/edge");
+if (!isTauri && !navigator.hid && !navigator.bluetooth) {
+  alert("Please use browser with WebHID or WebBluetooth support");
 }
 
-const via = new ViaKeyboard();
+const via = new ViaKeyboard(
+  isTauri || navigator.hid !== undefined,
+  navigator.bluetooth !== undefined,
+);
 
 function App() {
   const [vialJson, setVialJson] = useState<VialDefinition | undefined>(undefined);
@@ -69,10 +81,14 @@ function App() {
   const [quantumEraseDialogOpen, setQuantumEraseDialogOpen] = useState(false);
   const vialFileInputRef = useRef<HTMLInputElement>(null);
   const [quantumValues, setQuantumValues] = useState<{ [id: string]: number }>({});
-  const [deviceList, setDeviceList] = useState<{ name: string; index: number; opened: boolean }[]>(
-    [],
-  );
+  const [deviceList, setDeviceList] = useState<
+    { name: string; index: number; connection: ConnectionType; opened: boolean }[]
+  >([]);
   const [deviceIndex, setDeviceIndex] = useState<number | undefined>(undefined);
+  const loadingTimerRef = useRef<number | null>(null);
+  const [menuOpen, setMenuOpen] = useState(true);
+  const theme = useTheme();
+  const isWideScreen = useMediaQuery(theme.breakpoints.up("md"));
 
   useEffect(() => {
     // load wasm
@@ -80,13 +96,35 @@ function App() {
     (async () => {
       setDeviceList(await updateDeviceList());
     })();
+    via.setOnLoading((isLoading: boolean) => {
+      // Clear any existing timer regardless of new state
+      if (loadingTimerRef.current !== null) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+
+      // Set a new timer for either state change
+      loadingTimerRef.current = window.setTimeout(
+        () => {
+          setLoading(isLoading);
+          loadingTimerRef.current = null;
+        },
+        isLoading ? 100 : 300,
+      ); // Use a slightly shorter delay for true to feel more responsive
+    });
   }, []);
+
+  // Control menu visibility based on screen size and active menu state
+  useEffect(() => {
+    setMenuOpen(isWideScreen || !activeMenu);
+  }, [isWideScreen, activeMenu]);
 
   const updateDeviceList = async () => {
     return (await via.GetDeviceList()).map((d) => {
       return {
         name: `${d.name}(${("0000" + d.vid.toString(16)).slice(-4)}:${("0000" + d.pid.toString(16)).slice(-4)})`,
         index: d.index,
+        connection: d.connectionType,
         opened: d.opened,
       };
     });
@@ -103,21 +141,28 @@ function App() {
 
   const openKeyboard = async (deviceIndex: number) => {
     await via.Close();
-    await via.Open(
-      deviceIndex ?? -1,
-      () => {
-        setLoading(true);
-      },
-      () => {
-        setVialJson(undefined);
-        setCustomMenus([]);
-        setActiveMenu(undefined);
-        setCustomValues({});
-        setConnected(false);
-        setLoading(false);
-        setKbName("");
-      },
-    );
+    try {
+      await via.Open(
+        deviceIndex ?? -1,
+        () => {
+          setLoading(true);
+        },
+        () => {
+          setDeviceIndex(undefined);
+          setVialJson(undefined);
+          setCustomMenus([]);
+          setActiveMenu(undefined);
+          setCustomValues({});
+          setConnected(false);
+          setLoading(false);
+          setKbName("");
+        },
+      );
+    } catch (e) {
+      alert("Failed to open the keyboard");
+      setDeviceIndex(undefined);
+      return;
+    }
 
     const deviceList = await updateDeviceList();
     setDeviceList(deviceList);
@@ -140,7 +185,8 @@ function App() {
     try {
       const compressed = await via.GetVialCompressedDefinition();
       decompressed = xz_decompress(compressed);
-    } catch {
+    } catch (e) {
+      console.error(e);
       via.Close();
       alert("Failed to open the keyboard");
       setLoading(false);
@@ -305,18 +351,62 @@ function App() {
       <Dialog open={loading}>
         <DialogContent>Loading...</DialogContent>
       </Dialog>
-      <Grid container spacing={2}>
-        <Grid item xs={3}>
-          <Box>
-            <KeyboardSelector
-              deviceIndex={deviceIndex}
-              deviceList={deviceList}
-              onChange={(idx) => openKeyboard(idx)}
-              onOpen={async () => {
-                const deviceList = await updateDeviceList();
-                setDeviceList(deviceList);
-              }}
-            />
+      {!menuOpen && (
+        <IconButton onClick={() => setMenuOpen(true)} className="menu-button">
+          <MenuIcon />
+        </IconButton>
+      )}
+      <Grid
+        container
+        spacing={2}
+        id="menu"
+        sx={{ pl: 1 }}
+        style={{ position: "relative", minWidth: "100vw" }}
+      >
+        <Grid
+          item
+          xs={12}
+          md={3}
+          pl={1}
+          sx={{
+            display: menuOpen ? "block" : "none",
+            position: { xs: "absolute", md: "relative" },
+            zIndex: { xs: 999, md: "auto" },
+            backgroundColor: "white",
+            height: { xs: "100%", md: "auto" },
+            width: { xs: "80%", md: "auto" },
+            boxShadow: { xs: "0 0 10px rgba(0,0,0,0.2)", md: "none" },
+            "@media (max-width: 899px)": {
+              "& button": { fontSize: "smaller" },
+            },
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Box sx={{ width: "100%" }}>
+              <KeyboardSelector
+                deviceIndex={deviceIndex}
+                deviceList={deviceList}
+                onChange={(idx) => {
+                  setDeviceIndex(idx);
+                  openKeyboard(idx);
+                }}
+                onOpen={async () => {
+                  const deviceList = await updateDeviceList();
+                  setDeviceList(deviceList);
+                }}
+              />
+            </Box>
+            {!isWideScreen && (
+              <IconButton onClick={() => setMenuOpen(false)}>
+                <MenuIcon />
+              </IconButton>
+            )}
           </Box>
           <Divider />
           <ListSubheader>{kbName}</ListSubheader>
@@ -326,7 +416,6 @@ function App() {
                 <Button
                   sx={{
                     width: "100%",
-                    ml: 1,
                     mb: 1,
                   }}
                   variant="contained"
@@ -390,7 +479,6 @@ function App() {
                     <Button
                       sx={{
                         width: "100%",
-                        ml: 1,
                         mb: 1,
                       }}
                       variant="contained"
@@ -423,7 +511,7 @@ function App() {
             <Box hidden={customMenus.length == 0}>
               <ListSubheader>Custom settings</ListSubheader>
             </Box>
-            <Box sx={{ ml: 2 }}>
+            <Box sx={{ pl: 2 }}>
               {customMenus.map((top) => (
                 <Box key={top.label}>
                   <ListSubheader> {top.label}</ListSubheader>
@@ -435,7 +523,17 @@ function App() {
                           setActiveMenu({ menuType: "customMenu", menu: menu });
                         }}
                       >
-                        <ListItemText primary={menu.label} />
+                        <ListItemText
+                          primary={menu.label}
+                          primaryTypographyProps={{
+                            noWrap: true,
+                            style: {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            },
+                          }}
+                        />
                       </ListItemButton>
                     ))}
                   </List>
@@ -450,7 +548,6 @@ function App() {
                 <Button
                   sx={{
                     width: "100%",
-                    ml: 1,
                     mb: 1,
                   }}
                   variant="contained"
@@ -480,7 +577,12 @@ function App() {
             Usage
           </Link>
         </Grid>
-        <Grid item xs={8}>
+        <Grid
+          item
+          xs={12}
+          md={ 9}
+          sx={{ pl: { xs: menuOpen ? "80%" : 5, md: 0 } }}
+        >
           {match(activeMenu)
             .with(undefined, () => <></>)
             .with({ menuType: "customMenu" }, (menu) => (
@@ -506,7 +608,9 @@ function App() {
             .with(P._, () => <></>)
             .exhaustive()}
           {vialJson === undefined ? (
-            <></>
+            <>
+              <p>select keyboard</p>
+            </>
           ) : (
             <>
               <div hidden={activeMenu?.menuType !== "keymap"}>

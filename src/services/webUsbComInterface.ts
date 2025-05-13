@@ -16,4 +16,5 @@ export interface WebUsbComInterface {
   close(): Promise<void>;
   writeString(msg: string): Promise<void>;
   write(msg: Uint8Array): Promise<void>;
+  getName(): string;
 }

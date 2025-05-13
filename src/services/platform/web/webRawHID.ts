@@ -64,7 +64,7 @@ class WebRawHID implements WebUsbComInterface {
       )[0];
 
     if (!this.port) {
-      return;
+      return Promise.reject(new Error("No HID device found"));
     }
 
     try {

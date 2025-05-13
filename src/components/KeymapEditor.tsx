@@ -8,13 +8,15 @@ import {
   FormControlLabel,
   FormGroup,
   Grid,
+  InputLabel,
   MenuItem,
   Popper,
   Select,
   TextField,
+  Typography,
 } from "@mui/material";
 import { matchSorter } from "match-sorter";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { match, P } from "ts-pattern";
 import "../App.css";
 import { ViaKeyboard } from "../services/vialKeyboad";
@@ -30,6 +32,18 @@ import {
 import { MacroEditor } from "./MacroEditor";
 import { OverrideEditor } from "./OverrideEditor";
 import { TapDanceEditor } from "./TapDanceEditor";
+
+// Create a context to track the focused key and keycode change handler
+export interface FocusedKeyContextType {
+  focusedKey: KeymapKeyProperties | null;
+  setFocusedKey: (key: KeymapKeyProperties | null) => void;
+  onKeycodeChange?: (target: KeymapKeyProperties, newKeycode: QmkKeycode) => void;
+}
+
+export const FocusedKeyContext = createContext<FocusedKeyContextType>({
+  focusedKey: null,
+  setFocusedKey: () => {},
+});
 
 export interface KeymapProperties {
   matrix: { rows: number; cols: number };
@@ -115,12 +129,12 @@ export function EditableKey(props: {
   );
 }
 
-export function KeymapKey(props: KeymapKeyProperties) {
+export function KeymapKey(props: KeymapKeyProperties & { isFocused?: boolean }) {
   const [isDragOver, setIsDragOver] = useState(false);
   return (
     <div
       key={props.reactKey}
-      className={`keymap-key ${props.isEncoder && "keymap-encoder"} ${isDragOver && "drag-over"}`}
+      className={`keymap-key ${props.isEncoder && "keymap-encoder"} ${isDragOver && "drag-over"} ${props.isFocused && "keymap-key-focused"}`}
       style={
         props.r != 0
           ? {
@@ -175,6 +189,7 @@ export function KeymapKeyPopUp(props: {
   keycodeconverter: KeycodeConverter;
   keycode: QmkKeycode;
   anchor?: HTMLElement;
+  boundary: HTMLElement | null;
   keymapKey?: KeymapKeyProperties;
   onClickAway?: () => void;
   onChange?: (event: { keymapkey?: KeymapKeyProperties; keycode: QmkKeycode }) => void;
@@ -195,6 +210,8 @@ export function KeymapKeyPopUp(props: {
     props.keycodeconverter.getModifier(props.keycode),
   );
   const [keycodeValue, setKeycodeValue] = useState<string>("");
+  // Create a container ref for Autocomplete components
+  const popupRef = useRef<HTMLDivElement | null>(null);
 
   const filterOptions = (options: QmkKeycode[], { inputValue }: { inputValue: string }) =>
     matchSorter(options, inputValue, { keys: ["label", "key", "aliases.*"] });
@@ -207,14 +224,39 @@ export function KeymapKeyPopUp(props: {
     setModsValue(props.keycodeconverter.getModifier(props.keycode));
     setKeycodeValue((props.keycode.value ?? 0).toString());
   }, [props.keycode]);
+
   return (
     <ClickAwayListener
-      mouseEvent="onMouseDown"
-      touchEvent="onTouchStart"
-      onClickAway={() => props.onClickAway?.()}
+      mouseEvent="onMouseUp"
+      touchEvent="onTouchEnd"
+      onClickAway={(e) => {
+        if (!(e.target as HTMLElement).className.includes("keycode-catalog-tab")) {
+          props.onClickAway?.();
+        }
+      }}
     >
-      <Popper open={props.open} anchorEl={props.anchor} placement="bottom-start">
-        <div className="key-select-popup">
+      <Popper
+        open={props.open}
+        anchorEl={props.anchor}
+        placement="auto-start"
+        modifiers={[
+          {
+            name: "preventOverflow",
+            options: {
+              boundary: props.boundary || document.body,
+              padding: 8,
+            },
+          },
+          {
+            name: "flip",
+            options: {
+              fallbackPlacements: ["top-start", "top-end", "bottom-start", "bottom-end"],
+              boundary: props.boundary || document.body,
+            },
+          },
+        ]}
+      >
+        <div className="key-select-popup" ref={popupRef}>
           <Autocomplete
             value={tapValue}
             filterOptions={filterOptions}
@@ -249,6 +291,14 @@ export function KeymapKeyPopUp(props: {
                 <div className="list-key">{option.key}</div>
               </Box>
             )}
+            ListboxProps={{
+              style: { maxHeight: "200px" },
+            }}
+            slotProps={{
+              popper: {
+                container: popupRef.current,
+              },
+            }}
           ></Autocomplete>
 
           <Autocomplete
@@ -285,6 +335,14 @@ export function KeymapKeyPopUp(props: {
                 <div className="list-key">{option.key}</div>
               </Box>
             )}
+            ListboxProps={{
+              style: { maxHeight: "200px" },
+            }}
+            slotProps={{
+              popper: {
+                container: popupRef.current,
+              },
+            }}
           ></Autocomplete>
           <FormGroup row>
             {(
@@ -299,7 +357,7 @@ export function KeymapKeyPopUp(props: {
               <FormControlLabel
                 key={idx}
                 value={Object.keys(k)[0]}
-                sx={{ margin: 1 }}
+                sx={{ mt: 1, mb: 1, ml: 0, mr: 0 }}
                 control={
                   <Checkbox
                     checked={(modsValue & Object.values(k)[0]) !== 0}
@@ -321,7 +379,7 @@ export function KeymapKeyPopUp(props: {
                     size="small"
                   ></Checkbox>
                 }
-                label={Object.keys(k)[0]}
+                label={<Typography sx={{ fontSize: "0.8rem" }}>{Object.keys(k)[0]}</Typography>}
                 labelPlacement="top"
               ></FormControlLabel>
             ))}
@@ -442,7 +500,8 @@ function LayoutSelector(props: {
   onChange: (option: { [layout: number]: number }) => void;
 }) {
   return (
-    <FormControl variant="standard">
+    <FormControl variant="standard" sx={{ mt: 1 }}>
+      <InputLabel>Layout</InputLabel>
       <Select
         value={props.option[0]}
         label="layout"
@@ -462,12 +521,25 @@ function LayoutSelector(props: {
 
 function LayerSelector(props: { layerCount: number; onChange: (layer: number) => void }) {
   return (
-    <>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "row",
+        gap: 1,
+        mb: 2,
+        mt: 1,
+        maxWidth: "100%",
+        overflowX: "never",
+      }}
+    >
       {[...Array(props.layerCount)].map((_, idx) => {
         return (
           <Button
             key={idx}
             value={idx}
+            variant="outlined"
+            size="small"
+            sx={{ minWidth: "36px", flexShrink: 0 }}
             onClick={() => {
               props.onChange(idx);
             }}
@@ -476,7 +548,7 @@ function LayerSelector(props: { layerCount: number; onChange: (layer: number) =>
           </Button>
         );
       })}
-    </>
+    </Box>
   );
 }
 
@@ -490,8 +562,12 @@ function KeymapLayer(props: {
 }) {
   const [popupOpen, setpopupOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | undefined>(undefined);
+  const boundaryEl = useRef<HTMLElement>(null);
   const [focusedKey, setFocusedKey] = useState<KeymapKeyProperties | undefined>(undefined);
   const [candidateKeycode, setCandidateKeycode] = useState<QmkKeycode>(DefaultQmkKeycode);
+
+  // Access the global focus context
+  const focusContext = useContext(FocusedKeyContext);
 
   const keymapkeys = convertToKeymapKeys(
     props.keymapProps,
@@ -501,40 +577,60 @@ function KeymapLayer(props: {
     props.keycodeconverter,
   );
 
+  // Calculate the rightmost position to determine needed width
+  const rightmostPos = Math.max(...keymapkeys.map((key) => key.x + key.w)) * WIDTH_1U + WIDTH_1U; // Add extra space
+
+  // Update context when local focused key changes
+  useEffect(() => {
+    if (focusedKey) {
+      focusContext.setFocusedKey({
+        ...focusedKey,
+        onKeycodeChange: props.onKeycodeChange,
+      });
+    } else {
+      focusContext.setFocusedKey(null);
+    }
+  }, [focusedKey, props.onKeycodeChange, focusContext]);
+
   return (
-    <>
-      <div
-        style={{
+    <Box ref={boundaryEl}>
+      <Box
+        sx={{
           position: "relative",
-          marginTop: 50,
+          mt: 1,
           height: `${(Math.max(...keymapkeys.map((k) => k.y)) + 1) * WIDTH_1U}px`,
+          width: `${rightmostPos}px`, // Set explicit width based on rightmost key plus padding
+          minWidth: "100%", // Ensure it's at least as wide as the container
         }}
       >
         {keymapkeys.map((p, idx) => (
           <KeymapKey
             key={idx}
             {...p}
+            isFocused={focusedKey?.reactKey === idx.toString()}
             onKeycodeChange={props.onKeycodeChange}
             onClick={(target) => {
               setCandidateKeycode(p.keycode);
-              setFocusedKey(p);
+              setFocusedKey({ ...p, reactKey: idx.toString() });
               setpopupOpen(true);
               setAnchorEl(target);
             }}
             reactKey={idx.toString()}
           />
         ))}
-      </div>
+      </Box>
       <KeymapKeyPopUp
         open={popupOpen}
         keycodeconverter={props.keycodeconverter}
         keycode={focusedKey?.keycode ?? DefaultQmkKeycode}
         anchor={anchorEl}
+        boundary={boundaryEl.current}
         keymapKey={focusedKey}
         onClickAway={() => {
           if (popupOpen) {
             setpopupOpen(false);
             setAnchorEl(undefined);
+            setFocusedKey(undefined); // Clear focus when closing popup
             if (focusedKey) {
               props.onKeycodeChange?.(focusedKey!, candidateKeycode);
             }
@@ -544,7 +640,7 @@ function KeymapLayer(props: {
           setCandidateKeycode(event.keycode);
         }}
       ></KeymapKeyPopUp>
-    </>
+    </Box>
   );
 }
 
@@ -602,38 +698,39 @@ function LayerEditor(props: {
 
   return (
     <>
-      <div>
-        <LayoutSelector
-          via={props.via}
-          layouts={props.keymap.layouts}
-          option={layoutOption}
-          onChange={(option) => {
-            setLayoutOption(option);
-            sendLayout(option[0]);
-          }}
-        />
-        <LayerSelector
-          layerCount={props.layerCount}
-          onChange={async (layer) => {
-            if (!Object.keys(keymap).includes(layer.toString())) {
-              const layerKeys = await props.via.GetLayer(layer, {
-                rows: props.keymap.matrix.rows,
-                cols: props.keymap.matrix.cols,
-              });
-              const newKeymap = { ...keymap };
-              newKeymap[layer] = layerKeys;
-              setKeymap(newKeymap);
-              console.log(`load keymap ${layer}`);
-              console.log(layerKeys);
+      <LayoutSelector
+        via={props.via}
+        layouts={props.keymap.layouts}
+        option={layoutOption}
+        onChange={(option) => {
+          setLayoutOption(option);
+          sendLayout(option[0]);
+        }}
+      />
+      <LayerSelector
+        layerCount={props.layerCount}
+        onChange={async (layer) => {
+          if (!Object.keys(keymap).includes(layer.toString())) {
+            const layerKeys = await props.via.GetLayer(layer, {
+              rows: props.keymap.matrix.rows,
+              cols: props.keymap.matrix.cols,
+            });
+            const newKeymap = { ...keymap };
+            newKeymap[layer] = layerKeys;
+            setKeymap(newKeymap);
+            console.log(`load keymap ${layer}`);
+            console.log(layerKeys);
 
-              setEncodermap({
-                ...encodermap,
-                [layer]: await props.via.GetEncoder(layer, encoderCount),
-              });
-            }
-            setLayer(layer);
-          }}
-        ></LayerSelector>
+            setEncodermap({
+              ...encodermap,
+              [layer]: await props.via.GetEncoder(layer, encoderCount),
+            });
+          }
+          setLayer(layer);
+        }}
+      ></LayerSelector>
+
+      <Box sx={{ width: "100%", overflowX: "auto", pl: 1, pr: 5 }}>
         {Object.keys(keymap).includes(layer.toString()) ? (
           <KeymapLayer
             keymapProps={props.keymap}
@@ -653,6 +750,11 @@ function LayerEditor(props: {
                 console.log(`update encoder`);
               } else {
                 const offset = props.keymap.matrix.cols * target.matrix[0] + target.matrix[1];
+
+                if (keymap[layer][offset] == newKeycode.value) {
+                  return;
+                }
+
                 const newKeymap = { ...keymap };
                 newKeymap[layer][offset] = newKeycode.value;
                 setKeymap(newKeymap);
@@ -666,7 +768,7 @@ function LayerEditor(props: {
         ) : (
           <></>
         )}
-      </div>
+      </Box>
     </>
   );
 }
@@ -714,6 +816,9 @@ export function KeymapEditor(props: {
   const [lang, setLang] = useState("US");
   const [keycodeConverter, setKeycodeConverter] = useState<KeycodeConverter>();
 
+  // State for the focused key context
+  const [focusedKey, setFocusedKey] = useState<KeymapKeyProperties | null>(null);
+
   useEffect(() => {
     KeycodeConverter.Create(
       props.dynamicEntryCount.layer,
@@ -727,96 +832,122 @@ export function KeymapEditor(props: {
   return keycodeConverter === undefined ? (
     <></>
   ) : (
-    <>
-      <Box hidden={menuType !== "layer"}>
-        <LayerEditor
-          {...props}
-          layerCount={props.dynamicEntryCount.layer}
-          keycodeConverter={keycodeConverter}
-        ></LayerEditor>
+    <FocusedKeyContext.Provider
+      value={{ focusedKey, setFocusedKey, onKeycodeChange: focusedKey?.onKeycodeChange }}
+    >
+      <Box
+        sx={{
+          width: "100%",
+          overflowX: "auto",
+          pl: 1,
+          pr: 1,
+          boxShadow: "0px -2px 10px rgba(0,0,0,0.1)",
+        }}
+      >
+        <Box hidden={menuType !== "layer"}>
+          <LayerEditor
+            {...props}
+            layerCount={props.dynamicEntryCount.layer}
+            keycodeConverter={keycodeConverter}
+          ></LayerEditor>
+        </Box>
+        <Box hidden={menuType !== "tapdance"}>
+          <TapDanceEditor
+            via={props.via}
+            keycodeConverter={keycodeConverter}
+            tapdanceIndex={tdIndex}
+            onBack={() => {
+              setMenuType("layer");
+            }}
+          ></TapDanceEditor>
+        </Box>
+        <Box hidden={menuType !== "macro"}>
+          <MacroEditor
+            via={props.via}
+            keycodeConverter={keycodeConverter}
+            macroIndex={macroIndex}
+            macroCount={props.dynamicEntryCount.macro}
+            onBack={() => {
+              setMenuType("layer");
+            }}
+          ></MacroEditor>
+        </Box>
+        <Box hidden={menuType !== "combo"}>
+          <ComboEditor
+            via={props.via}
+            keycodeConverter={keycodeConverter}
+            comboIndex={comboIndex}
+            comboCount={props.dynamicEntryCount.combo}
+            onBack={() => {
+              setMenuType("layer");
+            }}
+          ></ComboEditor>
+        </Box>
+        <Box hidden={menuType !== "override"}>
+          <OverrideEditor
+            via={props.via}
+            keycodeConverter={keycodeConverter}
+            overrideIndex={overrideIndex}
+            overrideCount={props.dynamicEntryCount.override}
+            onBack={() => {
+              setMenuType("layer");
+            }}
+          ></OverrideEditor>
+        </Box>
       </Box>
-      <Box hidden={menuType !== "tapdance"}>
-        <TapDanceEditor
-          via={props.via}
+
+      <Box
+        sx={{
+          position: "relative",
+          backgroundColor: "white",
+          boxShadow: "0px -2px 10px rgba(0,0,0,0.1)",
+          width: "100%",
+          maxWidth: "100%",
+          overflowX: "auto",
+          pb: 3,
+          pt: 3,
+        }}
+      >
+        <Box sx={{ pl: 1 }}>
+          <LanguageSelector
+            languageList={["US", "Japanese"]}
+            lang={lang}
+            onChange={(lang) => setLang(lang)}
+          ></LanguageSelector>
+        </Box>
+        <KeycodeCatalog
           keycodeConverter={keycodeConverter}
-          tapdanceIndex={tdIndex}
-          onBack={() => {
-            setMenuType("layer");
-          }}
-        ></TapDanceEditor>
-      </Box>
-      <Box hidden={menuType !== "macro"}>
-        <MacroEditor
-          via={props.via}
-          keycodeConverter={keycodeConverter}
-          macroIndex={macroIndex}
-          macroCount={props.dynamicEntryCount.macro}
-          onBack={() => {
-            setMenuType("layer");
-          }}
-        ></MacroEditor>
-      </Box>
-      <Box hidden={menuType !== "combo"}>
-        <ComboEditor
-          via={props.via}
-          keycodeConverter={keycodeConverter}
-          comboIndex={comboIndex}
+          tab={[
+            { label: "Basic", keygroup: ["internal", "basic", "modifiers"] },
+            { label: "Mouse", keygroup: ["mouse"] },
+            { label: "User/Wireless", keygroup: ["custom", "kb", "user"] },
+            { label: "Media", keygroup: ["media"] },
+            { label: "Quantum", keygroup: ["quantum"] },
+            { label: "Layer", keygroup: ["layer"] },
+            { label: "Macro", keygroup: ["macro"] },
+            { label: "TapDance", keygroup: ["tapdance"] },
+            { label: "Combo/Override", keygroup: ["combo", "keyoverride"] },
+          ]}
           comboCount={props.dynamicEntryCount.combo}
-          onBack={() => {
-            setMenuType("layer");
-          }}
-        ></ComboEditor>
-      </Box>
-      <Box hidden={menuType !== "override"}>
-        <OverrideEditor
-          via={props.via}
-          keycodeConverter={keycodeConverter}
-          overrideIndex={overrideIndex}
           overrideCount={props.dynamicEntryCount.override}
-          onBack={() => {
-            setMenuType("layer");
+          onTapdanceSelect={(index) => {
+            setMenuType("tapdance");
+            setTdIndex(index);
           }}
-        ></OverrideEditor>
+          onMacroSelect={(index) => {
+            setMenuType("macro");
+            setMacroIndex(index);
+          }}
+          onComoboSelect={(index) => {
+            setMenuType("combo");
+            setComboIndex(index);
+          }}
+          onOverrideSelect={(index) => {
+            setMenuType("override");
+            setOverrideIndex(index);
+          }}
+        ></KeycodeCatalog>
       </Box>
-      <Box>
-        <LanguageSelector
-          languageList={["US", "Japanese"]}
-          lang={lang}
-          onChange={(lang) => setLang(lang)}
-        ></LanguageSelector>
-      </Box>
-      <KeycodeCatalog
-        keycodeConverter={keycodeConverter}
-        tab={[
-          { label: "Basic", keygroup: ["internal", "basic", "modifiers"] },
-          { label: "Mouse", keygroup: ["mouse"] },
-          { label: "User/Wireless", keygroup: ["custom", "kb", "user"] },
-          { label: "Media", keygroup: ["media"] },
-          { label: "Quantum", keygroup: ["quantum"] },
-          { label: "Layer", keygroup: ["layer"] },
-          { label: "Macro", keygroup: ["macro"] },
-          { label: "TapDance", keygroup: ["tapdance"] },
-          { label: "Combo/Override", keygroup: ["combo", "keyoverride"] },
-        ]}
-        comboCount={props.dynamicEntryCount.combo}
-        overrideCount={props.dynamicEntryCount.override}
-        onTapdanceSelect={(index) => {
-          setMenuType("tapdance");
-          setTdIndex(index);
-        }}
-        onMacroSelect={(index) => {
-          setMenuType("macro");
-          setMacroIndex(index);
-        }}
-        onComoboSelect={(index) => {
-          setMenuType("combo");
-          setComboIndex(index);
-        }}
-        onOverrideSelect={(index) => {
-          setMenuType("override");
-          setOverrideIndex(index);
-        }}
-      ></KeycodeCatalog>
-    </>
+    </FocusedKeyContext.Provider>
   );
 }

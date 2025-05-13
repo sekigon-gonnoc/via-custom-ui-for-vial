@@ -89,6 +89,10 @@ class WebRawHID implements WebUsbComInterface {
   setCloseCallback(_handler: () => void | null): void {}
 
   async writeString(_msg: string): Promise<void> {}
+
+  getName(): string {
+    return this.devicePath;
+  }
 }
 
 export { WebRawHID };

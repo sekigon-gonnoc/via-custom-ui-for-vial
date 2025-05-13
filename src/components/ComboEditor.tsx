@@ -1,5 +1,5 @@
 import { Box, Button, Grid } from "@mui/material";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
@@ -12,6 +12,7 @@ export function ComboEditor(props: {
   onBack: () => void;
 }) {
   const [combo, setCombo] = useState<{ [id: string]: ComboValue }>({});
+  const boundaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     navigator.locks.request("load-combo", async () => {
@@ -47,7 +48,7 @@ export function ComboEditor(props: {
   };
 
   return (
-    <Box>
+    <Box ref ={boundaryRef}>
       <div>{`Edit combo ${props.comboIndex}`}</div>
       <ComboEntry
         combo={
@@ -62,6 +63,7 @@ export function ComboEditor(props: {
           }
         }
         keycodeconverter={props.keycodeConverter}
+        boundaryRef={boundaryRef}
         onSave={(newCombo) => {
           const newComboSet = { ...combo };
           newComboSet[props.comboIndex] = newCombo;
@@ -82,6 +84,7 @@ interface ComboValue {
 function ComboEntry(props: {
   combo: ComboValue;
   keycodeconverter: KeycodeConverter;
+  boundaryRef?: React.RefObject<HTMLDivElement>;
   onSave?: (combo: ComboValue) => void;
   onBack?: () => void;
 }) {
@@ -152,6 +155,7 @@ function ComboEntry(props: {
         keycode={candidateKeycode}
         keycodeconverter={props.keycodeconverter}
         anchor={anchorEl}
+        boundary={props.boundaryRef?.current ?? null}
         onClickAway={() => {
           if (popupOpen) {
             setpopupOpen(false);

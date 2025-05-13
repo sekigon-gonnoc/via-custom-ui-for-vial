@@ -34,6 +34,20 @@
   }
 }
 
+.keymap-key.keymap-key-focused {
+  border: 2px solid #4CAF50 !important;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0px rgba(76, 175, 80, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+}
+
 .keymap-key.drag-over {
   background-color: whitesmoke;
 }
@@ -50,7 +64,7 @@
 }
 
 .key-select-popup {
-  width: 400px;
+  width: 300px;
   border: solid;
   border-width: 1px;
   padding: 8px;
@@ -86,4 +100,63 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* Ensure menu items don't overflow */
+.MuiMenuItem-root {
+  white-space: normal;
+  word-break: break-word;
+  min-height: 48px;
+}
+
+.MuiListItemText-primary {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.MuiSelect-select {
+  white-space: normal !important;
+}
+
+/* For the side menu */
+.menu-container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Responsive menu styles */
+
+.menu-button {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 999;
+  color: white;
+}
+
+
+@media (max-width: 899px) {
+  #menu {
+    min-height: 100vh;
+    position: relative;
+  }
+  
+  .menu-transition {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+  }
+}
+
+/* Content should take full width when menu is closed on mobile */
+.content-container {
+  transition: margin-left 0.3s ease-in-out;
 }

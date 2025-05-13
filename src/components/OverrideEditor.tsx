@@ -1,5 +1,5 @@
 import { Box, Button, Checkbox, FormControlLabel, FormGroup, Grid, Switch } from "@mui/material";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ViaKeyboard } from "../services/vialKeyboad";
 import { DefaultQmkKeycode, KeycodeConverter, QmkKeycode } from "./keycodes/keycodeConverter";
 import { EditableKey, KeymapKeyPopUp } from "./KeymapEditor";
@@ -12,6 +12,7 @@ export function OverrideEditor(props: {
   onBack: () => void;
 }) {
   const [override, setOverride] = useState<{ [id: string]: OverrideValue }>({});
+  const boundaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     navigator.locks.request("load-override", async () => {
@@ -41,7 +42,7 @@ export function OverrideEditor(props: {
   };
 
   return (
-    <Box>
+    <Box ref={boundaryRef}>
       <div>{`Edit override ${props.overrideIndex}`}</div>
       <OverrideEntry
         override={
@@ -93,6 +94,7 @@ enum OverrideOption {
 function OverrideEntry(props: {
   override: OverrideValue;
   keycodeconverter: KeycodeConverter;
+  boundrayRef?: React.RefObject<HTMLDivElement>;
   onSave?: (override: OverrideValue) => void;
   onBack?: () => void;
 }) {
@@ -305,6 +307,7 @@ function OverrideEntry(props: {
         keycode={candidateKeycode}
         keycodeconverter={props.keycodeconverter}
         anchor={anchorEl}
+        boundary={props.boundrayRef?.current ?? null}
         onClickAway={() => {
           if (popupOpen) {
             setpopupOpen(false);
