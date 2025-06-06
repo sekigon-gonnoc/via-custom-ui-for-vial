@@ -519,7 +519,11 @@ function LayoutSelector(props: {
   );
 }
 
-function LayerSelector(props: { layerCount: number; onChange: (layer: number) => void }) {
+function LayerSelector(props: {
+  layerCount: number;
+  currentLayer?: number;
+  onChange: (layer: number) => void;
+}) {
   return (
     <Box
       sx={{
@@ -533,11 +537,12 @@ function LayerSelector(props: { layerCount: number; onChange: (layer: number) =>
       }}
     >
       {[...Array(props.layerCount)].map((_, idx) => {
+        const isActive = props.currentLayer === idx;
         return (
           <Button
             key={idx}
             value={idx}
-            variant="outlined"
+            variant={isActive ? "contained" : "outlined"}
             size="small"
             sx={{ minWidth: "36px", flexShrink: 0 }}
             onClick={() => {
@@ -709,6 +714,7 @@ function LayerEditor(props: {
       />
       <LayerSelector
         layerCount={props.layerCount}
+        currentLayer={layer}
         onChange={async (layer) => {
           if (!Object.keys(keymap).includes(layer.toString())) {
             const layerKeys = await props.via.GetLayer(layer, {
